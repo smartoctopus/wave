@@ -66,3 +66,7 @@ run.sh
 # Editors
 .vscode/
 .cache/
+
+# Debuggers
+.gdb_history
+peda-session-wave.txt

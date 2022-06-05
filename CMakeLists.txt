@@ -22,7 +22,7 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(${PROJECT_NAME} src/compiler/main.c)
+add_executable(${PROJECT_NAME} src/compiler/main.c src/compiler/lexer.c)
 
 target_include_directories( ${PROJECT_NAME}
     PRIVATE ${PROJECT_SOURCE_DIR}/src/compiler/include

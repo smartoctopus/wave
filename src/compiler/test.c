@@ -17,6 +17,7 @@
 #define UTIL_IMPL
 #include "util.h"
 
+#include "diagnostic.h"
 #include "lexer.h"
 #include "test.h"
 
@@ -35,23 +36,23 @@ test("Wave compiler")
             lexed_src = (LexedSrc) { 0 };
         }
 
-        it("Lexes nothing")
+        it("should lex nothing")
         {
             lexed_src = lex(0, stringview_from_cstr(""));
         }
 
-        it("Skips unknown characters")
+        it("should skip unknown characters")
         {
             lexed_src = lex(0, stringview_from_cstr("$"));
             expect(lexed_src.kind[0] == TOKEN_BAD);
         }
 
-        it("Skips spaces and tabs")
+        it("should skip spaces and tabs")
         {
             lexed_src = lex(0, stringview_from_cstr("    \t\t\t"));
         }
 
-        it("Lexes operators")
+        it("should lex operators")
         {
             lexed_src = lex(0, stringview_from_cstr("+ - * / % & | ^ && || |> < > <= >= == != << >> ! ? => -> ~ , ; : . .. ... @ (  ) [  ] { } += -= *= /= %= &= |= ^= <<= >>="));
             TokenKind kinds[] = {
@@ -111,7 +112,7 @@ test("Wave compiler")
             }
         }
 
-        it("Lexes integers")
+        it("should lex integers")
         {
             lexed_src = lex(0, stringview_from_cstr("1_234  0b110  0o01234_567  0x0123456789_ABCDEF"));
             expect(lexed_src.kind[0] == TOKEN_INT);
@@ -120,7 +121,7 @@ test("Wave compiler")
             expect(lexed_src.kind[3] == TOKEN_INT);
         }
 
-        it("Lexes floating point numbers")
+        it("should lex floating point numbers")
         {
             lexed_src = lex(0, stringview_from_cstr("1.2  1e+2 0x1_p2  0x1.2p-2"));
             expect(lexed_src.kind[0] == TOKEN_FLOAT);
@@ -129,7 +130,7 @@ test("Wave compiler")
             expect(lexed_src.kind[3] == TOKEN_FLOAT);
         }
 
-        it("Lexes a char")
+        it("should lex a char")
         {
             lexed_src = lex(0, stringview_from_cstr("'c' '\xFF' '\t'"));
             expect(lexed_src.kind[0] == TOKEN_CHAR);
@@ -137,14 +138,14 @@ test("Wave compiler")
             expect(lexed_src.kind[2] == TOKEN_CHAR);
         }
 
-        it("Lexes a string")
+        it("should lex a string")
         {
             lexed_src = lex(0, stringview_from_cstr("\"Hello, World\" \"\"\" Multiline string \"\"\""));
             expect(lexed_src.kind[0] == TOKEN_STRING);
             expect(lexed_src.kind[1] == TOKEN_MULTILINE_STRING);
         }
 
-        it("Lexes Identifiers")
+        it("should lex identifiers")
         {
             lexed_src = lex(0, stringview_from_cstr("hello1234  __world  va_123lue  function"));
             expect(lexed_src.kind[0] == TOKEN_IDENTIFIER);
@@ -153,7 +154,7 @@ test("Wave compiler")
             expect(lexed_src.kind[3] == TOKEN_IDENTIFIER);
         }
 
-        it("Lexes Keywords")
+        it("should lex keywords")
         {
             lexed_src = lex(0, stringview_from_cstr("as  alignof  asm  break  continue  context  defer  distinct  else  enum  for  foreign  fallthrough  if  in  import  mut  match  map  new  own  or  offsetof  return  struct  sizeof  typeof  using  union  undef  where  when"));
             expect(lexed_src.kind[0] == TOKEN_AS);
@@ -190,14 +191,14 @@ test("Wave compiler")
             expect(lexed_src.kind[31] == TOKEN_WHEN);
         }
 
-        it("Lexes newlines")
+        it("should lex newlines")
         {
             lexed_src = lex(0, stringview_from_cstr("\n\n"));
             expect(lexed_src.kind[0] == TOKEN_NEWLINE);
             expect(lexed_src.kind[1] == TOKEN_NEWLINE);
         }
 
-        it("Lexes comments")
+        it("should lex and skip comments")
         {
             lexed_src = lex(0, stringview_from_cstr("// This is a comment\n /* This is /* also */ a comment */\n /// This is a doc comment "));
             expect(lexed_src.kind[0] == TOKEN_COMMENT);
@@ -206,6 +207,20 @@ test("Wave compiler")
             expect(lexed_src.kind[3] == TOKEN_NEWLINE);
             expect(lexed_src.kind[4] == TOKEN_DOC_COMMENT);
             expect(lexed_src.kind[5] == TOKEN_NEWLINE);
+        }
+    }
+
+    describe("Diagnostics")
+    {
+        skip("should print a diagnostic")
+        {
+            stringview content = stringview_from_cstr("main :: (args: []string) -> void {\n    println(\"Hello, World!\")\n}\n");
+            FileId file_id = add_file("example.txt", content);
+            array(Diagnostic) diags = NULL;
+            Span span = { .file_id = file_id, .start = 0, .end = 0 };
+            array_push(diags, error(span, "unused variable", "unused", "this is a hint:\n\n    main :: (args: []string) -> int {\n        println(\"Hello, World!\")\n    }"));
+            emit_diagnostics(diags);
+            vfs_cleanup();
         }
     }
 }

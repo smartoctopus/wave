@@ -80,13 +80,24 @@
 #    define unreachable() unreachable0(__FILE__, __LINE__)
 #endif
 
+// panic
+#if !defined(panic)
+#    define panic0(line, file, ...)                                         \
+        do {                                                                \
+            fprintf(stderr, __VA_ARGS__);                                   \
+            fprintf(stderr, "\nPanic at line %d in file %s\n", line, file); \
+            abort();                                                        \
+        } while (0)
+#    define panic(...) panic0(__LINE__, __FILE__, __VA_ARGS__)
+#endif
+
 // xmalloc/xrealloc
 extern void *_xmalloc(size_t size, const char *file, uint64_t line);
 extern void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line);
 
 #define xmalloc(n) _xmalloc((n), __FILE__, __LINE__)
 #define xrealloc(p, n) _xrealloc((p), (n), __FILE__, __LINE__)
-#define xfree(p) free((p))
+#define xfree(p) unused((p) != NULL ? (free((void *)(p)), 0) : 0)
 
 // Memory functions
 void memswap(void *a, void *b, size_t size);

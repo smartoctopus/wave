@@ -17,8 +17,24 @@
 #ifndef VFS_H_
 #define VFS_H_
 
-#include "stdint.h"
+#include "util.h"
 
+/// VFS stands for Virtual File System
+/// It is used to refer to files through FileId, an integer
+
+/// FileId is an integer type used to refer to a file
 typedef uint16_t FileId;
+
+/// Add a file to the virtual file system
+FileId add_file(char const *path, stringview content);
+
+/// Get the filepath of the file referred by file_id
+char const *filepath(FileId file_id);
+
+/// Get content of the file referred by file_id
+stringview filecontent(FileId file_id);
+
+/// Cleanup the Virtual File System
+void vfs_cleanup(void);
 
 #endif // VFS_H_

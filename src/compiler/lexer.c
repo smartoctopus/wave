@@ -603,7 +603,7 @@ LexedSrc lex(FileId file_id, stringview src)
     LexedSrc result = { .src = src };
 
     // Reserve space for the arrays
-    size_t size = src.length;
+    size_t size = src.length / 8;
     array_reserve(result.kind, size);
     array_reserve(result.start, size);
 

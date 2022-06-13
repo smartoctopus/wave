@@ -22,6 +22,8 @@ typedef struct Lexer {
     FileId file_id;
     Token token;
     char const *str;
+    char const *start;
+    array(Diagnostic) diagnostics;
 } Lexer;
 
 typedef struct KeywordInfo {
@@ -88,6 +90,14 @@ static int digit_decoder[128] = {
 
 static bool is_escapeable[128] = { ['\\'] = true, ['\''] = true, ['"'] = true, ['0'] = true, ['t'] = true, ['v'] = true, ['r'] = true, ['n'] = true, ['b'] = true, ['a'] = true };
 
+#define push_error(start, end, message, label, hint) (array_push(lexer->diagnostics, lexer_error(lexer, (start), (end), (message), (label), (hint))))
+
+static Diagnostic lexer_error(Lexer *lexer, char const *start, char const *end, char const *message, char const *label, char const *hint)
+{
+    Span span = { .file_id = lexer->file_id, .start = start - lexer->start, .end = end - lexer->start };
+    return error(span, message, label, hint);
+}
+
 static alwaysinline int lex_base(Lexer *lexer)
 {
     int base = 10;
@@ -132,8 +142,9 @@ static int skip_digits(Lexer *lexer, int base)
             if (*str == 'e' || *str == 'E')
                 break;
 
-            // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-            fprintf(stderr, "Digit '%c' is not allowed in base '%d'\n", *str, base);
+            char const *label = strf("'%c' is not allowed in base '%d'", *str, base);
+            push_error(str, str, "invalid digit in numeric literal", label, NULL);
+            xfree(label);
         }
 
         str++;
@@ -159,17 +170,32 @@ static flatten char const *lex_number(Lexer *lexer)
 
         token.kind = TOKEN_FLOAT;
 
-        if (base != 10 && base != 16) {
-            // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-            fprintf(stderr, "Invalid base %d in floating point literal\n", base);
-        }
-
-        if (base == 16 && count > 1) {
-            // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-            fprintf(stderr, "Invalid base 16 floating point literal\n");
-        }
-
         skip_digits(lexer, base);
+
+        if (base != 10 && base != 16) {
+            char const *label = strf("this number is encoded in base '%d'", base);
+            push_error(token.start, lexer->str, "invalid base in floating point literal", label, "Floating point literals support only two bases: 10 and 16");
+            xfree(label);
+        }
+
+        if (base == 16) {
+            // count should not be 0 nor anything bigger than 1
+            if (count != 1) {
+                char const *label;
+                if (count == 0) {
+                    label = strf("this number doesn't have the single digit after the 'x'");
+                } else {
+                    label = strf("this number has got too many digits after the 'x'");
+                }
+                push_error(token.start, lexer->str, "invalid hexadecimal floating point literal", label, "An hexadecimal floating point literal expects only one digit after the 'x'. For example:\n\n    0x1.2p2\n\n");
+                xfree(label);
+            }
+
+            char const *p = lexer->str + 1;
+            if (*p != 'p') {
+                push_error(token.start, lexer->str, "invalid hexadecimal point literal", "this number misses the exponent", "An hexadecimal point literal always expects an exponent encoded in base 10");
+            }
+        }
     }
 
     if (*lexer->str == 'e' || *lexer->str == 'E') {
@@ -185,8 +211,10 @@ static flatten char const *lex_number(Lexer *lexer)
         token.kind = TOKEN_FLOAT;
 
         if (base != 16) {
-            // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-            fprintf(stderr, "Invalid 'p' suffix with base %d\n", base);
+            // NOTE: probably this error should be rewritten
+            char const *label = strf("this number is encoded in base '%d'", base);
+            push_error(token.start, lexer->str, "invalid suffix", label, "The suffix 'p' is only used when the literal is in base 16. If you need scientific notation use either an hexadecimal floating point literal or a decimal floating point literal. For example:\n\n    hexadecimal: 0x1.2p2\n    decimal: 1.2e2\n\n");
+            xfree(label);
         }
 
         lexer->str++;
@@ -213,8 +241,9 @@ static char const *handle_escape(Lexer *lexer)
 
         int digit = digit_decoder[(int)*str];
         if (digit == 0 && *str != '0') {
-            // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-            fprintf(stderr, "Invalid hex character '%c' in character literal\n", *str);
+            char const *label = strf("invalid hex character '%c'");
+            push_error(lexer->str, str, "invalid escape", label, NULL);
+            xfree(label);
         } else {
             str++;
 
@@ -226,7 +255,9 @@ static char const *handle_escape(Lexer *lexer)
     } else if (is_escapeable[(int)*str]) {
         str++;
     } else {
-        fprintf(stderr, "Invalid character '%c' after escape\n", *str);
+        char const *label = strf("invalid character '%c'", *str);
+        push_error(lexer->str, str, "invalid escape", label, NULL);
+        xfree(label);
     }
 
     return str;
@@ -251,8 +282,12 @@ static flatten inline char const *lex_char(Lexer *lexer)
     if (likely(*str == '\'')) {
         str++;
     } else {
-        // FIXME: This is temporarly a fprintf call. Change it to our own diagnostic API
-        fprintf(stderr, "Unterminated character literal\n");
+        push_error(str, str, "unterminated character literal", "add a quote here", NULL);
+
+        // Skip characters until we finish the line/file
+        while (*str && *str != '\n') {
+            str++;
+        }
     }
 
     return str;
@@ -285,7 +320,7 @@ static flatten char const *lex_string(Lexer *lexer)
         token.kind = TOKEN_STRING;
 
         while (*str) {
-            if (*str == '"') {
+            if (*str == '"' || *str == '\n') {
                 str++;
                 break;
             }
@@ -301,7 +336,16 @@ static flatten char const *lex_string(Lexer *lexer)
     char const *quotes = str - 1;
 
     if (unlikely(*quotes != '"')) {
-        fprintf(stderr, "Unterminated string\n");
+        char const *message;
+        char const *hint;
+        if (token.kind == TOKEN_STRING) {
+            message = "unterminated string";
+            hint = "Probably you forgot a \". Add it where it's needed.";
+        } else {
+            message = "unterminated multiline string";
+            hint = "Probably you forgot three \". Add them where they're needed";
+        }
+        push_error(token.start, quotes, message, "missing \"", hint);
     }
 
     lexer->token = token;
@@ -576,7 +620,10 @@ repeat:
                 str += utf8_bytes(*str);
             }
         } else {
-            fprintf(stderr, "Unknown character '%c'\n", *str);
+            char const *message = strf("unknown character '%c'", *str);
+            push_error(str, str, message, "", NULL);
+            xfree(message);
+
             lexer->token.start = str;
             lexer->token.kind = TOKEN_BAD;
             str++;
@@ -598,7 +645,7 @@ repeat:
 
 LexedSrc lex(FileId file_id, stringview src)
 {
-    Lexer lexer = { .file_id = file_id, .str = src.str };
+    Lexer lexer = { .file_id = file_id, .str = src.str, .start = src.str };
 
     LexedSrc result = { .src = src };
 

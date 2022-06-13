@@ -19,8 +19,9 @@
 
 #include <assert.h> // assert()
 
-#include "util.h" // array(), stringview, utf8_isalpha(), utf8_isalnum()
-#include "vfs.h"  // FileId
+#include "diagnostic.h" // error(), warn()
+#include "util.h"       // array(), stringview, utf8_isalpha(), utf8_isalnum()
+#include "vfs.h"        // FileId
 
 /// x-macro to generate both the enum and the array of printable names
 /// NOTE: the enum variants should describe the name of the written character

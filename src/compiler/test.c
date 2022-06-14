@@ -18,7 +18,7 @@
 #include "util.h"
 
 #include "diagnostic.h"
-#include "lexer.h"
+#include "parser.h"
 #include "test.h"
 
 test("Wave compiler")
@@ -36,7 +36,7 @@ test("Wave compiler")
             lexed_src = (LexedSrc) { 0 };
         }
 
-        it("should lex nothing")
+        it("should lex an empty string")
         {
             lexed_src = lex(0, stringview_from_cstr(""));
         }
@@ -210,15 +210,42 @@ test("Wave compiler")
         }
     }
 
+    describe("Parser")
+    {
+        static Ast ast = { 0 };
+        after_each()
+        {
+            free_ast(ast);
+        }
+
+        it("should parse an empty string")
+        {
+            ast = parse(0, stringview_from_cstr(""));
+            expect(ast.nodes.kind[0] == NODE_ROOT);
+            expect(array_length(ast.nodes.kind) == 1);
+        }
+    }
+
     describe("Diagnostics")
     {
         skip("should print a diagnostic")
         {
+            char const *hint = "I can only comprehend these three type of declaration:\n\n"
+                               "    foo : int : 5\n"
+                               "    bar := 5\n"
+                               "    baz :: (integer: int) -> int {\n"
+                               "        return integer\n"
+                               "    }\n\n"
+                               "I can also comprehend the when directive\n\n"
+                               "    when true {\n"
+                               "        var :: 5\n"
+                               "    }\n\n"
+                               "Try writing one of these";
             stringview content = stringview_from_cstr("main :: (args: []string) -> void {\n    println(\"Hello, World!\")\n}\n");
             FileId file_id = add_file("example.txt", content);
             array(Diagnostic) diags = NULL;
             Span span = { .file_id = file_id, .start = 0, .end = 0 };
-            array_push(diags, error(span, "unused variable", "unused", "this is a hint:\n\n    main :: (args: []string) -> int {\n        println(\"Hello, World!\")\n    }"));
+            array_push(diags, error(span, "unused variable", "unused", hint));
             emit_diagnostics(diags);
             vfs_cleanup();
         }

@@ -665,6 +665,7 @@ LexedSrc lex(FileId file_id, stringview src)
     array_push(result.start, src.length);
 
     result.num_tokens = array_length(result.kind);
+    result.diagnostics = lexer.diagnostics;
 
     return result;
 }

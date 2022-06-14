@@ -144,6 +144,7 @@ typedef struct LexedSrc {
     size_t num_tokens;
     array(TokenKind) kind;
     array(uint32_t) start;
+    array(Diagnostic) diagnostics;
 } LexedSrc;
 
 /// Lex a string with an associated 'file_id'

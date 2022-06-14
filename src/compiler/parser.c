@@ -64,27 +64,32 @@ static bool __match(Parser *parser, TokenKind kind)
     return false;
 }
 
+static void error_at_current(Parser *parser, char const *message, char const *label, char const *hint)
+{
+    size_t start = parser->token_start[parser->token_index];
+    Token token = { .start = parser->str + start, .kind = current() };
+    Span span = {
+        .file_id = parser->file_id,
+        .start = start,
+        .end = start + token_length(token),
+    };
+
+    Diagnostic diag = error(span, message, label, hint);
+    array_push(parser->diagnostics, diag);
+}
+
 static bool __expect(Parser *parser, TokenKind kind, char const *hint)
 {
     if (current() == kind) {
         advance();
         return true;
     }
-    size_t start = parser->token_start[parser->token_index];
-    Token token = { .start = parser->str + start, .kind = current() };
-    Span span = {
-        .file_id = parser->file_id,
-        .start = start,
-        start + token_length(token),
-    };
-
-    char const *message = strf("expected %s", token_to_string(kind));
-    char const *label = strf("found %s", token_to_string(current()));
-    Diagnostic diag = error(span, message, label, hint);
+    char const *message = strf("expected '%s'", token_to_string(kind));
+    char const *label = strf("found '%s'", token_to_string(current()));
+    error_at_current(parser, message, label, hint);
     xfree(label);
     xfree(message);
 
-    array_push(parser->diagnostics, diag);
     return false;
 }
 
@@ -113,6 +118,15 @@ Index parse_type(Parser *parser);
 //   - foo : int = 5
 static Index parse_init(Parser *parser, Index identifier)
 {
+    char const *hint = "I can only comprehend these types of initialization:\n\n"
+                       "    foo : int : 5\n"
+                       "    bar := 5\n"
+                       "    fizz: int = 6\n"
+                       "    baz :: (integer: int) -> int {\n"
+                       "        return integer\n"
+                       "    }\n\n"
+                       "Try writing one of these";
+
     if (match(TOKEN_COLON)) {
         Index init = reserve_node(parser);
 
@@ -129,7 +143,9 @@ static Index parse_init(Parser *parser, Index identifier)
                                                              .variable = { .type = type, .expr = expr },
                                                          });
         } else {
-            // FIXME: report error
+            char const *label = strf("found '%s'", token_to_string(current()));
+            error_at_current(parser, "expected one of ':' or '='", label, hint);
+            xfree(label);
             return invalid;
         }
 
@@ -144,15 +160,6 @@ static Index parse_init(Parser *parser, Index identifier)
                                                      });
         return init;
     } else {
-        char const *hint = "I can only comprehend these types of initialization:\n\n"
-                           "    foo : int : 5\n"
-                           "    bar := 5\n"
-                           "    fizz: int = 6\n"
-                           "    baz :: (integer: int) -> int {\n"
-                           "        return integer\n"
-                           "    }\n\n"
-                           "Try writing one of these";
-
         if (!expect(TOKEN_COLON_COLON, hint))
             return invalid;
 

@@ -25,6 +25,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SOURCES
     src/compiler/main.c
     src/compiler/lexer.c
+    src/compiler/ast.c
     src/compiler/vfs.c
     src/compiler/diagnostic.c
 )

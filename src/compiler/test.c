@@ -224,6 +224,28 @@ test("Wave compiler")
             expect(ast.nodes.kind[0] == NODE_ROOT);
             expect(array_length(ast.nodes.kind) == 1);
         }
+
+        it("should parse a function without args")
+        {
+            ast = parse(0, stringview_from_cstr("main :: () {\n}"));
+            expect(ast.nodes.kind[1] == NODE_CONST);
+            Index func = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[func] == NODE_FUNC);
+            // Function prototype
+            Index index = ast.nodes.data[func].func.func_proto;
+            expect(ast.nodes.kind[index] == NODE_FUNC_PROTO_ONE);
+            Index proto_index = ast.nodes.data[index].func_proto.proto;
+            FuncProtoOne func_proto = get_extra(ast.nodes.extra, FuncProtoOne, proto_index);
+            expect(func_proto.param == 0);
+            expect(func_proto.calling_convention == 0);
+            Index return_type = ast.nodes.data[index].func_proto.return_type;
+            expect(return_type == 0);
+            // Function body
+            Index body = ast.nodes.data[func].func.body;
+            expect(ast.nodes.kind[body] == NODE_BLOCK);
+            expect(ast.nodes.data[body].block.start == 0);
+            expect(ast.nodes.data[body].block.end == 0);
+        }
     }
 
     describe("Diagnostics")

@@ -9,6 +9,8 @@
 #define match(_kind) (__match(parser, (_kind)))
 #define expect(_kind, _hint) (__expect(parser, (_kind), (_hint)))
 
+#define extra(_data) (add_extra(parser->nodes.extra, (_data)))
+
 /// Internal data structure used to parse a source string
 typedef struct Parser {
     // Parsing
@@ -171,6 +173,114 @@ static Index parse_struct(Parser *parser)
     assert(current() == TOKEN_STRUCT);
     advance();
     return invalid;
+}
+
+static int parse_function_args(Parser *parser, Range *range)
+{
+    Index start = 0;
+    Index end = 0;
+
+    assert(current() == TOKEN_LPAREN);
+    advance();
+
+    if (match(TOKEN_RPAREN)) {
+        return 0;
+    }
+
+    int count = 0;
+
+    do {
+        Index ident = index();
+        expect(TOKEN_IDENTIFIER, "");
+
+        if (match(TOKEN_COLON)) {
+            Index arg = reserve_node(parser);
+
+            Index type = parse_type(parser);
+
+            Index expr = invalid;
+            if (match(TOKEN_EQ)) {
+                expr = parse_expr(parser);
+            }
+
+            set_node(parser, arg, NODE_ARG, ident, (Data) {
+                                                       .binary = { .lhs = type, .rhs = expr },
+                                                   });
+            if (start == 0) {
+                start = arg;
+            } else {
+                end = arg;
+            }
+
+            count++;
+        } else {
+            break;
+        }
+    } while (match(TOKEN_COMMA));
+
+    *range = (Range) { start, end };
+    return count;
+}
+
+static Index parse_function(Parser *parser)
+{
+    Index result = reserve_node(parser);
+    Index func_proto = reserve_node(parser);
+
+    Index start = index();
+    Range args;
+    int count = parse_function_args(parser, &args);
+
+    // range.end can only be 0 when we cannot parse any argument
+    if (args.end == 0) {
+        // Pop the function return value
+        pop_node(parser, func_proto);
+        pop_node(parser, result);
+
+        // Reset the cursor
+        parser->token_index = start;
+        return invalid;
+    }
+
+    expect(TOKEN_RPAREN, "");
+
+    Index return_type = invalid;
+    if (match(TOKEN_ARROW)) {
+        return_type = parse_type(parser);
+    }
+
+    Index calling_convention = invalid;
+    if (match(TOKEN_STRING)) {
+        calling_convention = index() - 1;
+    }
+
+    Index body = parse_block(parser);
+
+    // Set func-proto
+    if (count == 0) {
+        FuncProtoOne data = { invalid, calling_convention };
+        Index proto = extra(data);
+        set_node(parser, func_proto, NODE_FUNC_PROTO_ONE, invalid, (Data) {
+                                                                       .func_proto = { proto, return_type },
+                                                                   });
+    } else if (count == 1) {
+        FuncProtoOne data = { args.start, calling_convention };
+        Index proto = extra(data);
+        set_node(parser, func_proto, NODE_FUNC_PROTO_ONE, invalid, (Data) {
+                                                                       .func_proto = { proto, return_type },
+                                                                   });
+    } else {
+        FuncProto data = { args, calling_convention };
+        Index proto = extra(data);
+        set_node(parser, func_proto, NODE_FUNC_PROTO, invalid, (Data) {
+                                                                   .func_proto = { proto, return_type },
+                                                               });
+    }
+    set_node(parser, result, NODE_FUNC, start, (Data) {
+                                                   .func = { func_proto, body },
+                                               });
+
+    return result;
 }
 
 static Index parse_operand(Parser *parser)

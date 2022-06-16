@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "ast.h"
 
 // Token macros
 #define peek(_n) (parser->token_kind[parser->token_index + (_n)])
@@ -55,6 +54,17 @@ static void set_node(Parser *parser, Index index, NodeKind kind, Index token, Da
     parser->nodes.data[index] = data;
 }
 
+static void pop_node(Parser *parser, Index index)
+{
+    if (index != array_length(parser->nodes.kind) - 1) {
+        panic("Internal Compiler Error: popping a node that isn't at the end of the array");
+    }
+
+    unused(array_pop(parser->nodes.kind));
+    unused(array_pop(parser->nodes.token));
+    unused(array_pop(parser->nodes.data));
+}
+
 static bool __match(Parser *parser, TokenKind kind)
 {
     if (current() == kind) {
@@ -93,7 +103,6 @@ static bool __expect(Parser *parser, TokenKind kind, char const *hint)
     return false;
 }
 
-/// Skip to the next decl
 static void next_decl(Parser *parser)
 {
     while (current() != TOKEN_IDENTIFIER && (peek(1) == TOKEN_COLON_COLON || peek(1) == TOKEN_COLON || peek(1) == TOKEN_COLON_EQ)) {

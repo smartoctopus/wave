@@ -175,11 +175,9 @@ static Index parse_struct(Parser *parser)
     return invalid;
 }
 
-static int parse_function_args(Parser *parser, Range *range)
+// FIXME: design errors for *ALL* function parsing
+static int parse_function_params(Parser *parser, Range *range)
 {
-    Index start = 0;
-    Index end = 0;
-
     assert(current() == TOKEN_LPAREN);
     advance();
 
@@ -187,15 +185,15 @@ static int parse_function_args(Parser *parser, Range *range)
         return 0;
     }
 
-    int count = 0;
+    array(Node) params = NULL;
+    size_t count = 0;
 
-    do {
+    while (current() == TOKEN_IDENTIFIER) {
         Index ident = index();
-        expect(TOKEN_IDENTIFIER, "");
+        advance();
 
         if (match(TOKEN_COLON)) {
-            Index arg = reserve_node(parser);
-
+            // FIXME: check for variadic parameters
             Index type = parse_type(parser);
 
             Index expr = invalid;
@@ -203,20 +201,39 @@ static int parse_function_args(Parser *parser, Range *range)
                 expr = parse_expr(parser);
             }
 
-            set_node(parser, arg, NODE_ARG, ident, (Data) {
-                                                       .binary = { .lhs = type, .rhs = expr },
-                                                   });
-            if (start == 0) {
-                start = arg;
-            } else {
-                end = arg;
-            }
+            Node param = {
+                .kind = NODE_PARAM,
+                .token = ident,
+                .data = {
+                    .param = { type, expr },
+                },
+            };
 
+            array_push(params, param);
             count++;
         } else {
-            break;
+            if (current() != TOKEN_COMMA)
+                return -1;
+
+            // FIXME: report missing type
         }
-    } while (match(TOKEN_COMMA));
+
+        if (match(TOKEN_RPAREN))
+            break;
+
+        expect(TOKEN_COMMA, "");
+    }
+
+    Index start = array_length(parser->nodes.kind);
+
+    for (size_t i = 0; i < count; ++i) {
+        Node param = params[i];
+        add_node(parser, param.kind, param.token, param.data);
+    }
+
+    Index end = array_length(parser->nodes.kind) - 1;
+
+    array_free(params);
 
     *range = (Range) { start, end };
     return count;
@@ -229,10 +246,9 @@ static Index parse_function(Parser *parser)
 
     Index start = index();
     Range args;
-    int count = parse_function_args(parser, &args);
+    int count = parse_function_params(parser, &args);
 
-    // range.end can only be 0 when we cannot parse any argument
-    if (args.end == 0) {
+    if (count == -1) {
         // Pop the function return value
         pop_node(parser, func_proto);
         pop_node(parser, result);

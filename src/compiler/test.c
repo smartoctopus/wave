@@ -109,6 +109,7 @@ test("Wave compiler")
                 const char *str2 = token_to_string(kinds[i]);
                 const char *str = strf("%d) %s = %s", i, str1, str2);
                 expect_str(lexed_src.kind[i] == kinds[i], str);
+                xfree(str);
             }
         }
 
@@ -225,7 +226,7 @@ test("Wave compiler")
             expect(array_length(ast.nodes.kind) == 1);
         }
 
-        it("should parse a function without args")
+        it("should parse a function without parameters")
         {
             ast = parse(0, stringview_from_cstr("main :: () {\n}"));
             expect(ast.nodes.kind[1] == NODE_CONST);
@@ -245,6 +246,47 @@ test("Wave compiler")
             expect(ast.nodes.kind[body] == NODE_BLOCK);
             expect(ast.nodes.data[body].block.start == 0);
             expect(ast.nodes.data[body].block.end == 0);
+        }
+
+        it("should parse a function with one parameter")
+        {
+            // FIXME: when we can parse the types check them
+            stringview content = stringview_from_cstr("main :: (args: ) {\n}\n");
+            ast = parse(0, content);
+            Index func = ast.nodes.data[1].variable.expr;
+            Index index = ast.nodes.data[func].func.func_proto;
+            Index proto_index = ast.nodes.data[index].func_proto.proto;
+            FuncProtoOne func_proto = get_extra(ast.nodes.extra, FuncProtoOne, proto_index);
+            Index param = func_proto.param;
+            expect(ast.nodes.kind[param] == NODE_PARAM);
+            expect(ast.nodes.data[param].param.type == 0);
+            expect(ast.nodes.data[param].param.expr == 0);
+        }
+
+        it("should parse a function with multple parameters")
+        {
+            // FIXME: when we can parse the types check them
+            stringview content = stringview_from_cstr("main :: (arg1: , arg2: , arg3: , arg4: , arg5: , arg6: ) {\n}\n");
+            ast = parse(0, content);
+            Index func = ast.nodes.data[1].variable.expr;
+            Index index = ast.nodes.data[func].func.func_proto;
+            Index proto_index = ast.nodes.data[index].func_proto.proto;
+            FuncProto func_proto = get_extra(ast.nodes.extra, FuncProto, proto_index);
+            Range params = func_proto.params;
+            int count = 1;
+            for (size_t i = params.start; i <= params.end; ++i) {
+                char const *kind_str = strf("%d) kind", count);
+                char const *type_str = strf("%d) type", count);
+                char const *expr_str = strf("%d) expr", count);
+                expect_str(ast.nodes.kind[i] == NODE_PARAM, kind_str);
+                expect_str(ast.nodes.data[i].param.type == 0, type_str);
+                expect_str(ast.nodes.data[i].param.expr == 0, expr_str);
+                xfree(kind_str);
+                xfree(type_str);
+                xfree(expr_str);
+
+                count++;
+            }
         }
     }
 

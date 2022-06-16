@@ -290,6 +290,43 @@ test("Wave compiler")
                 count++;
             }
         }
+
+        it("should parse a structure without fields")
+        {
+            stringview content = stringview_from_cstr("foo :: struct {}\n");
+            ast = parse(0, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(end == 0);
+            expect(start == 0);
+        }
+
+        it("should parse a structure with one field")
+        {
+            stringview content = stringview_from_cstr("foo :: struct {bar: \n}\n");
+            ast = parse(0, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(end - start == 0);
+            expect(ast.nodes.kind[start] == NODE_FIELD);
+        }
+
+        it("should parse a structure with two field")
+        {
+            stringview content = stringview_from_cstr("foo :: struct {bar: \n baz:\n}\n");
+            ast = parse(0, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(end - start == 1);
+            expect(ast.nodes.kind[start] == NODE_FIELD);
+            expect(ast.nodes.kind[end] == NODE_FIELD);
+        }
     }
 
     describe("Diagnostics")

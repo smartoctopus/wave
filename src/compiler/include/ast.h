@@ -250,6 +250,10 @@ typedef union Data {
     struct {
         Index start;
         Index end;
+    } aggregate;
+    struct {
+        Index start;
+        Index end;
     } simple_using;
     struct {
         Index name;

@@ -427,6 +427,7 @@ static Index parse_decl(Parser *parser)
 static flatten void parse_decls(Parser *parser)
 {
     while (current() != TOKEN_EOF) {
+        skip_newlines(parser);
         Index decl = parse_decl(parser);
         if (decl == invalid) {
             next_decl(parser);

@@ -133,6 +133,39 @@ static Index parse_stmt(Parser *parser)
     return invalid;
 }
 
+static Index parse_block(Parser *parser)
+{
+    if (current() != TOKEN_LBRACE) {
+        return invalid;
+    }
+
+    Index token = index();
+    advance();
+
+    Index result = reserve_node(parser);
+
+    Index start = 0;
+    Index end = 0;
+
+    while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
+        skip_newlines(parser);
+        Index stmt = parse_stmt(parser);
+        if (unlikely(start == 0)) {
+            start = stmt;
+        } else {
+            end = stmt;
+        }
+    }
+
+    advance();
+
+    Range range = { start, end };
+
+    set_node(parser, result, NODE_BLOCK, token, (Data) { .block = range });
+
+    return result;
+}
+
 static Index parse_struct(Parser *parser)
 {
     assert(current() == TOKEN_STRUCT);

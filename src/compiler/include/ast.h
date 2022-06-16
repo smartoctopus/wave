@@ -204,7 +204,6 @@ typedef enum NodeKind {
     NODE_ARRAY_ACCESS,
 
     // Types
-    NODE_TYPE,
     // token lhs
     NODE_REF_TYPE,
     NODE_REF_MUT_TYPE,

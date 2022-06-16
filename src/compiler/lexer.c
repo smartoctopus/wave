@@ -467,7 +467,7 @@ repeat:
     OP('?', TOKEN_QUESTION);
     OP(',', TOKEN_COMMA);
     OP(';', TOKEN_SEMICOLON);
-    OP(':', TOKEN_COLON);
+    OP2_EQ(':', TOKEN_COLON, ':', TOKEN_COLON_COLON);
     OP('@', TOKEN_AT);
     OP('~', TOKEN_TILDE);
     OP('(', TOKEN_LPAREN);

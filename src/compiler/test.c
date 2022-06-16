@@ -54,7 +54,7 @@ test("Wave compiler")
 
         it("should lex operators")
         {
-            lexed_src = lex(0, stringview_from_cstr("+ - * / % & | ^ && || |> < > <= >= == != << >> ! ? => -> ~ , ; : . .. ... @ (  ) [  ] { } += -= *= /= %= &= |= ^= <<= >>="));
+            lexed_src = lex(0, stringview_from_cstr("+ - * / % & | ^ && || |> < > <= >= == != << >> ! ? => -> ~ , ; : :: . .. ... @ (  ) [  ] { } += -= *= /= %= &= |= ^= <<= >>= :="));
             TokenKind kinds[] = {
                 TOKEN_PLUS,
                 TOKEN_MINUS,
@@ -83,6 +83,7 @@ test("Wave compiler")
                 TOKEN_COMMA,
                 TOKEN_SEMICOLON,
                 TOKEN_COLON,
+                TOKEN_COLON_COLON,
                 TOKEN_DOT,
                 TOKEN_DOT_DOT,
                 TOKEN_ELLIPSIS,
@@ -103,6 +104,7 @@ test("Wave compiler")
                 TOKEN_CARET_EQ,
                 TOKEN_LT_LT_EQ,
                 TOKEN_GT_GT_EQ,
+                TOKEN_COLON_EQ,
             };
             for (size_t i = 0; i < lengthof(kinds); ++i) {
                 const char *str1 = token_to_string(lexed_src.kind[i]);

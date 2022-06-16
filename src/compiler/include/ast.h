@@ -64,7 +64,7 @@ typedef enum NodeKind {
     // token : type = expr
     NODE_PARAM,
     // token : ... type
-    NODE_VARARG,
+    NODE_VARPARAM,
 
     // fn-proto body
     NODE_FUNC,
@@ -304,6 +304,13 @@ typedef struct Generic {
     Range type_params;
     Range where_block; // Inlined Data
 } Generic;
+
+/// A Node extracted form the NodeList (SOA)
+typedef struct Node {
+    NodeKind kind;
+    Data data;
+    Index token;
+} Node;
 
 /// The actual syntax tree
 /// This struct is implemented as an SOA (structure of arrays) for performance and cache coherency

@@ -214,7 +214,7 @@ static int parse_function_params(Parser *parser, Range *range)
                                                                          "Try moving your variadic paramter at the end of the parameter list");
         }
 
-        Index ident = index();
+        Index identifier = index();
         advance();
 
         if (match(TOKEN_COLON)) {
@@ -230,7 +230,7 @@ static int parse_function_params(Parser *parser, Range *range)
 
             Node param = {
                 .kind = vararg ? NODE_VARPARAM : NODE_PARAM,
-                .token = ident,
+                .token = identifier,
                 .data = {
                     .param = { type, expr },
                 },
@@ -265,6 +265,7 @@ static int parse_function_params(Parser *parser, Range *range)
         expect(TOKEN_COMMA, "I was expecting a comma after the parameter, like:\n\n"
                             "    foo :: (bar: int, baz: int) -> int\n\n"
                             "Try adding it");
+        skip_newlines(parser);
     }
 
     Index start = array_length(parser->nodes.kind);
@@ -317,6 +318,7 @@ static Index parse_function(Parser *parser)
         calling_convention = index() - 1;
     }
 
+    skip_newlines(parser);
     Index body;
     if (match(TOKEN_FAT_ARROW)) {
         body = parse_expr(parser);
@@ -479,13 +481,13 @@ static Index parse_decl(Parser *parser)
 static flatten void parse_decls(Parser *parser)
 {
     while (current() != TOKEN_EOF) {
-        skip_newlines(parser);
         Index decl = parse_decl(parser);
         if (decl == invalid) {
             next_decl(parser);
             decl = parse_decl(parser);
         }
         array_push(parser->decls, decl);
+        skip_newlines(parser);
     }
 }
 

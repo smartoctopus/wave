@@ -133,6 +133,43 @@ static Index parse_stmt(Parser *parser)
     return invalid;
 }
 
+static Index parse_struct(Parser *parser)
+{
+    assert(current() == TOKEN_STRUCT);
+    advance();
+    return invalid;
+}
+
+static Index parse_operand(Parser *parser)
+{
+    switch (current()) {
+    case TOKEN_LPAREN: {
+        Index expr = parse_function(parser);
+        if (expr != invalid)
+            return expr;
+
+        advance();
+        expr = parse_expr(parser);
+        expect(TOKEN_RPAREN, "");
+
+        return expr;
+    } break;
+    case TOKEN_STRUCT: {
+        return parse_struct(parser);
+    } break;
+    default: {
+        todo();
+    } break;
+    }
+    return invalid;
+}
+
+static Index parse_expr(Parser *parser)
+{
+    Index lhs = parse_operand(parser);
+    return lhs;
+}
+
 // Parse an initialization:
 //   - foo :: 5
 //   - foo := 5

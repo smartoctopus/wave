@@ -12,6 +12,12 @@
 
 #define extra(_data) (add_extra(parser->nodes.extra, (_data)))
 
+#define foreach_scratch(_scratch_top, _ident, _body)              \
+    for (size_t i = _scratch_top; i < parser->scratch_top; ++i) { \
+        Node _ident = parser->scratch[i];                         \
+        _body                                                     \
+    }
+
 /// Internal data structure used to parse a source string
 typedef struct Parser {
     // Parsing
@@ -33,6 +39,10 @@ typedef struct Parser {
     uint32_t token_index;
     // File we are parsing
     FileId file_id;
+
+    // Scratch
+    array(Node) scratch;
+    size_t scratch_top;
 } Parser;
 
 enum { invalid = 0 };
@@ -66,6 +76,12 @@ static void pop_node(Parser *parser, Index index)
     unused(array_pop(parser->nodes.kind));
     unused(array_pop(parser->nodes.token));
     unused(array_pop(parser->nodes.data));
+}
+
+static void add_scratch(Parser *parser, Node scratch_node)
+{
+    array_push(parser->scratch, scratch_node);
+    parser->scratch_top++;
 }
 
 static bool __match(Parser *parser, TokenKind kind)
@@ -185,8 +201,9 @@ static int parse_function_params(Parser *parser, Range *range)
         return 0;
     }
 
-    array(Node) params = NULL;
+    /* array(Node) params = NULL; */
     size_t count = 0;
+    size_t scratch_top = parser->scratch_top;
 
     bool vararg = false;
 
@@ -219,7 +236,8 @@ static int parse_function_params(Parser *parser, Range *range)
                 },
             };
 
-            array_push(params, param);
+            /* array_push(params, param); */
+            add_scratch(parser, param);
             count++;
         } else {
             if (current() != TOKEN_COMMA)
@@ -251,14 +269,18 @@ static int parse_function_params(Parser *parser, Range *range)
 
     Index start = array_length(parser->nodes.kind);
 
-    for (size_t i = 0; i < count; ++i) {
-        Node param = params[i];
+    /* for (size_t i = 0; i < count; ++i) { */
+    /*     Node param = params[i]; */
+    /*     add_node(parser, param.kind, param.token, param.data); */
+    /* } */
+
+    foreach_scratch(scratch_top, param, {
         add_node(parser, param.kind, param.token, param.data);
-    }
+    });
 
     Index end = array_length(parser->nodes.kind) - 1;
 
-    array_free(params);
+    /* array_free(params); */
 
     *range = (Range) { start, end };
     return count;

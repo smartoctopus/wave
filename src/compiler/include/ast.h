@@ -39,9 +39,6 @@ typedef enum NodeKind {
     NODE_STRUCT_TWO,
     // token { start..end }
     NODE_STRUCT,
-    // (generic) token { start..end }
-    NODE_STRUCT_GENERIC,
-    NODE_STRUCT_GENERIC_ONE,
 
     // lhs : rhs
     NODE_FIELD,
@@ -50,9 +47,6 @@ typedef enum NodeKind {
     NODE_ENUM_TWO,
     // token { start..end }
     NODE_ENUM,
-    // (generic) token { start..end }
-    NODE_ENUM_GENERIC,
-    NODE_ENUM_GENERIC_ONE,
 
     // lhs = rhs
     NODE_VARIANT_SIMPLE,
@@ -66,8 +60,6 @@ typedef enum NodeKind {
     // (args) -> return_type "calling_convention"
     NODE_FUNC_PROTO,
     NODE_FUNC_PROTO_ONE,
-    NODE_FUNC_PROTO_GENERIC,
-    NODE_FUNC_PROTO_GENERIC_ONE,
 
     // token : type = expr
     NODE_PARAM,
@@ -212,6 +204,7 @@ typedef enum NodeKind {
     NODE_ARRAY_ACCESS,
 
     // Types
+    NODE_TYPE,
     // token lhs
     NODE_REF_TYPE,
     NODE_REF_MUT_TYPE,
@@ -266,7 +259,7 @@ typedef union Data {
     struct {
         Index expr;
         Index body;
-    } cond_stmt;
+    } control_flow; // if, for and match
     struct {
         Index label;
     } loop_modifiers; // continue and break

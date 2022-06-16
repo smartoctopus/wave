@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "lexer.h"
 
 // Token macros
 #define peek(_n) (parser->token_kind[parser->token_index + (_n)])
@@ -294,7 +295,12 @@ static Index parse_function(Parser *parser)
         calling_convention = index() - 1;
     }
 
-    Index body = parse_block(parser);
+    Index body;
+    if (match(TOKEN_FAT_ARROW)) {
+        body = parse_expr(parser);
+    } else {
+        body = parse_block(parser);
+    }
 
     // Set func-proto
     if (count == 0) {

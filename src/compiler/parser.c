@@ -175,7 +175,6 @@ static Index parse_struct(Parser *parser)
     return invalid;
 }
 
-// FIXME: design errors for *ALL* function parsing
 static int parse_function_params(Parser *parser, Range *range)
 {
     assert(current() == TOKEN_LPAREN);
@@ -188,12 +187,22 @@ static int parse_function_params(Parser *parser, Range *range)
     array(Node) params = NULL;
     size_t count = 0;
 
+    bool vararg = false;
+
     while (current() == TOKEN_IDENTIFIER) {
+        if (vararg) {
+            error_at_current(parser, "found parameter after vararg", "", "I already found a variadic parameter, but now I found a normal parameter. There can only be one variadic parameter at the end of the parameter list. For example:\n\n"
+                                                                         "    foo :: (bar: int, baz: ...any)\n\n"
+                                                                         "Try moving your variadic paramter at the end of the parameter list");
+        }
+
         Index ident = index();
         advance();
 
         if (match(TOKEN_COLON)) {
-            // FIXME: check for variadic parameters
+            if (match(TOKEN_ELLIPSIS)) {
+                vararg = true;
+            }
             Index type = parse_type(parser);
 
             Index expr = invalid;
@@ -202,7 +211,7 @@ static int parse_function_params(Parser *parser, Range *range)
             }
 
             Node param = {
-                .kind = NODE_PARAM,
+                .kind = vararg ? NODE_VARPARAM : NODE_PARAM,
                 .token = ident,
                 .data = {
                     .param = { type, expr },
@@ -215,13 +224,28 @@ static int parse_function_params(Parser *parser, Range *range)
             if (current() != TOKEN_COMMA)
                 return -1;
 
-            // FIXME: report missing type
+            char const *start = parser->str + parser->token_start[parser->token_index - 1];
+            TokenKind kind = parser->token_kind[parser->token_index - 1];
+            Token token = { .start = start, .kind = kind };
+            stringview param = { .str = start, .length = token_length(token) };
+
+            char const *label = strf("found %s", token_to_string(current()));
+            char const *hint = strf("I was expecting a parameter with a type, like:\n\n"
+                                    "    foo :: (bar: int)\n"
+                                    "Try adding a type to the parameter " SV_FMT,
+                SV_ARGS(param));
+            error_at_current(parser, "expected a type", label, hint);
+            xfree(hint);
+            xfree(label);
         }
 
-        if (match(TOKEN_RPAREN))
+        // NOTE: should we actually exit right here when we encounter TOKEN_EOF
+        if (match(TOKEN_RPAREN) || current() == TOKEN_EOF)
             break;
 
-        expect(TOKEN_COMMA, "");
+        expect(TOKEN_COMMA, "I was expecting a comma after the parameter, like:\n\n"
+                            "    foo :: (bar: int, baz: int) -> int\n\n"
+                            "Try adding it");
     }
 
     Index start = array_length(parser->nodes.kind);
@@ -258,7 +282,7 @@ static Index parse_function(Parser *parser)
         return invalid;
     }
 
-    expect(TOKEN_RPAREN, "");
+    expect(TOKEN_RPAREN, "I was expecting a closing paranthesis after the function parameters. Try adding it!");
 
     Index return_type = invalid;
     if (match(TOKEN_ARROW)) {
@@ -309,7 +333,7 @@ static Index parse_operand(Parser *parser)
 
         advance();
         expr = parse_expr(parser);
-        expect(TOKEN_RPAREN, "");
+        expect(TOKEN_RPAREN, "I was expecting a closing parenthesis. Try adding it!");
 
         return expr;
     } break;
@@ -336,7 +360,7 @@ static Index parse_expr(Parser *parser)
 //   - foo : int = 5
 static Index parse_init(Parser *parser, Index identifier)
 {
-    char const *hint = "I can only comprehend these types of initialization:\n\n"
+    char const *hint = "I can only understand these types of initialization:\n\n"
                        "    foo : int : 5\n"
                        "    bar := 5\n"
                        "    fizz: int = 6\n"

@@ -117,8 +117,21 @@ static void skip_newlines(Parser *parser)
     }
 }
 
-Index parse_expr(Parser *parser);
-Index parse_type(Parser *parser);
+static Index parse_type(Parser *parser);
+static Index parse_expr(Parser *parser);
+static Index parse_stmt(Parser *parser);
+
+static Index parse_type(Parser *parser)
+{
+    unused(parser);
+    return invalid;
+}
+
+static Index parse_stmt(Parser *parser)
+{
+    unused(parser);
+    return invalid;
+}
 
 // Parse an initialization:
 //   - foo :: 5
@@ -194,7 +207,7 @@ static Index parse_decl(Parser *parser)
 
         Index decl = parse_init(parser, identifier);
 
-        unused(decl);
+        return decl;
     } break;
     case TOKEN_AT: {
         // FIXME: macros calls

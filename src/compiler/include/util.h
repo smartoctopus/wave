@@ -91,6 +91,11 @@
 #    define panic(...) panic0(__LINE__, __FILE__, __VA_ARGS__)
 #endif
 
+// todo
+#if !defined(todo)
+#    define todo() panic("TODO")
+#endif
+
 // xmalloc/xrealloc
 extern void *_xmalloc(size_t size, const char *file, uint64_t line);
 extern void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line);

@@ -5,6 +5,13 @@
 #include "lexer.h"
 #include "util.h"
 
+// Extra data macros
+#define add_extra(_buf, _data) \
+    (__add_extra((char **)&(_buf), (void *)&(_data), sizeof((_data))))
+
+#define get_extra(_buf, _type, _index) \
+    (*((_type *)((_buf) + (_index))))
+
 /// This represents an index into:
 ///   - the token array
 ///   - the source string
@@ -327,5 +334,8 @@ typedef struct Ast {
 
 /// Free the allocated memory of an Ast
 void free_ast(Ast ast);
+
+/// Add some data to NodeList.extra
+uint32_t __add_extra(char **, void *data, size_t len);
 
 #endif // AST_H_

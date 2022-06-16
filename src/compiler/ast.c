@@ -11,3 +11,11 @@ void free_ast(Ast ast)
     array_free(ast.decls);
     array_free(ast.diagnostics);
 }
+
+uint32_t __add_extra(char **buf, void *data, size_t len)
+{
+    size_t result = array_length(*buf);
+    array_maybegrow(*buf, len);
+    memcpy(*buf + result, data, len);
+    return result;
+}

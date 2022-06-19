@@ -1,6 +1,15 @@
 #include "parser.h"
 #include "lexer.h"
 
+/* TODO:
+ * handle newlines correctly
+ * handle comments
+ * improve next_decl()
+ * improve error handling
+ * improve error reporting
+ * fix all unused(mtach(TOKEN_R*)) -> make them expect()
+ */
+
 // Token macros
 #define peek(_n) (parser->token_kind[parser->token_index + (_n)])
 #define current() peek(0)
@@ -772,6 +781,7 @@ static Index parse_decl(Parser *parser)
 
 static flatten void parse_decls(Parser *parser)
 {
+    skip_newlines(parser);
     while (current() != TOKEN_EOF) {
         Index decl = parse_decl(parser);
         if (decl == invalid) {

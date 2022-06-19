@@ -280,6 +280,154 @@ static Index parse_struct(Parser *parser)
 
 #undef STRUCT_EXAMPLE
 
+#define ENUM_EXAMPLE "\n\n    foo :: enum {\n" \
+                     "        bar\n"           \
+                     "        baz\n"           \
+                     "    }\n"
+
+static Node parse_enum_variant(Parser *parser)
+{
+    // Field name
+    Index name = index();
+    expect(TOKEN_IDENTIFIER, "You can write a struct field like:" ENUM_EXAMPLE "\n"
+                             "Probably you are trying to use a keyword as the field name");
+
+    int count = -1;
+
+    size_t scratch_top = parser->scratch_top;
+
+    Index expr = invalid;
+
+    if (match(TOKEN_LPAREN)) {
+        count = 0;
+        while (current() != TOKEN_EOF && current() != TOKEN_RPAREN) {
+            Index lhs = parse_type(parser);
+
+            Index rhs = invalid;
+            if (match(TOKEN_COLON)) {
+                if (parser->nodes.kind[lhs] != NODE_IDENTIFIER) {
+                    // FIXME: report error lhs
+                }
+                rhs = parse_type(parser);
+            }
+
+            Node field = {
+                .kind = NODE_FIELD,
+                .token = lhs,
+                .data = { .binary = { lhs, rhs } },
+            };
+
+            add_scratch(parser, field);
+            count++;
+
+            if (current() == TOKEN_RPAREN)
+                break;
+
+            // NOTE: is this needed?
+            skip_newlines(parser);
+            bool comma = expect(TOKEN_COMMA, "");
+            if (!comma) {
+                // FIXME: handle this condition
+            }
+            skip_newlines(parser);
+        }
+
+        unused(match(TOKEN_RPAREN));
+    } else if (match(TOKEN_EQ)) {
+        expr = parse_expr(parser);
+    }
+
+    if (count == 0) {
+        // FIXME: report error
+    }
+
+    if (count == -1) {
+        return (Node) {
+            .kind = NODE_VARIANT_SIMPLE,
+            .token = name,
+            .data = { .binary = { .lhs = expr } },
+        };
+    }
+
+    Index start = array_length(parser->nodes.kind);
+
+    push_scratch(scratch_top);
+
+    Index end = array_length(parser->nodes.kind) - 1;
+
+    NodeKind kind = count <= 2 ? NODE_VARIANT_TWO : NODE_VARIANT;
+    return (Node) {
+        .kind = kind,
+        .token = name,
+        .data = {
+            .binary = { .lhs = start, .rhs = end },
+        }
+    };
+}
+
+static Index parse_enum(Parser *parser)
+{
+    Index token = index();
+    assert(current() == TOKEN_ENUM);
+    advance();
+
+    // NOTE: in this case the token corresponds to the type after the enum keyword
+    if (match(TOKEN_IDENTIFIER)) {
+        token = index() - 1;
+    }
+
+    bool found = expect(TOKEN_LBRACE, "I was expecting an opening brace after the enum keyword. Try adding it!" ENUM_EXAMPLE);
+    if (!found)
+        return invalid;
+
+    Index result = reserve_node(parser);
+
+    size_t scratch_top = parser->scratch_top;
+
+    int count = 0;
+
+    while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
+        Node variant = parse_enum_variant(parser);
+
+        add_scratch(parser, variant);
+        count++;
+
+        unused(match(TOKEN_COMMA));
+
+        if (current() == TOKEN_RBRACE || current() == TOKEN_EOF)
+            break;
+
+        expect(TOKEN_NEWLINE, "Every variant of an enum must end with a newline. For example:" ENUM_EXAMPLE "\n"
+                              "Try adding a newline");
+        skip_newlines(parser);
+    }
+
+    // We only eat the } and not the EOF
+    unused(match(TOKEN_RBRACE));
+
+    Index start = array_length(parser->nodes.kind);
+
+    push_scratch(scratch_top);
+
+    Index end = array_length(parser->nodes.kind) - 1;
+
+    if (count == 0) {
+        set_node(parser, result, NODE_ENUM_TWO, token, (Data) {
+                                                           .aggregate = { 0 },
+                                                       });
+    } else if (count <= 2) {
+        set_node(parser, result, NODE_ENUM_TWO, token, (Data) {
+                                                           .aggregate = { start, end },
+                                                       });
+    } else {
+        set_node(parser, result, NODE_ENUM, token, (Data) {
+                                                       .aggregate = { start, end },
+                                                   });
+    }
+
+    return result;
+}
+
 static int parse_function_params(Parser *parser, Range *range)
 {
     assert(current() == TOKEN_LPAREN);
@@ -459,6 +607,9 @@ static Index parse_operand(Parser *parser)
     } break;
     case TOKEN_STRUCT: {
         return parse_struct(parser);
+    } break;
+    case TOKEN_ENUM: {
+        return parse_enum(parser);
     } break;
     default: {
         todo();

@@ -341,6 +341,84 @@ test("Wave compiler")
             expect(ast.nodes.kind[start] == NODE_FIELD);
             expect(ast.nodes.kind[end] == NODE_FIELD);
         }
+
+        it("should parse a structure with multiple fields")
+        {
+            stringview content = stringview_from_cstr("foo :: struct {a: \n b: \nc: \n}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_STRUCT);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            int count = 1;
+            for (Index i = start; i <= end; ++i) {
+                char const *str = strf("%d field", count);
+                expect_str(ast.nodes.kind[i] == NODE_FIELD, str);
+                xfree(str);
+                count++;
+            }
+        }
+
+        it("should parse an enum without variants")
+        {
+            stringview content = stringview_from_cstr("foo :: enum {}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(start == 0);
+            expect(end == 0);
+        }
+
+        it("should parse an enum with one variant")
+        {
+            // stringview content = stringview_from_cstr("foo :: enum {hello = 1}");
+            stringview content = stringview_from_cstr("foo :: enum {hello}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(end - start == 0);
+            expect(ast.nodes.kind[start] == NODE_VARIANT_SIMPLE);
+        }
+
+        it("should parse an enum with two variants")
+        {
+            // stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
+            stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            expect(end - start == 1);
+            expect(ast.nodes.kind[start] == NODE_VARIANT_TWO);
+            expect(ast.nodes.kind[end] == NODE_VARIANT_SIMPLE);
+        }
+
+        it("should parse an enum with multiple variants")
+        {
+            stringview content = stringview_from_cstr("foo :: enum {hello,\n world\nto\nall\nof\nyou}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index aggregate = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[aggregate] == NODE_ENUM);
+            Index start = ast.nodes.data[aggregate].aggregate.start;
+            Index end = ast.nodes.data[aggregate].aggregate.end;
+            int count = 1;
+            for (Index i = start; i <= end; ++i) {
+                char const *str = strf("%d field", count);
+                expect_str(ast.nodes.kind[i] == NODE_VARIANT_SIMPLE, str);
+                xfree(str);
+                count++;
+            }
+        }
     }
 
     describe("Diagnostics")

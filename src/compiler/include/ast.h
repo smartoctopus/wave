@@ -43,19 +43,19 @@ typedef enum NodeKind {
     // lhs : rhs
     NODE_FIELD,
 
-    // token { lhs, rhs }
+    // enum token { lhs, rhs }
     NODE_ENUM_TWO,
-    // token { start..end }
+    // enum token { start..end }
     NODE_ENUM,
 
-    // lhs = rhs
+    // token = lhs
     NODE_VARIANT_SIMPLE,
-    // lhs(rhs)
-    // where rhs = range of types => start..end
-    NODE_VARIANT_UNNAMED,
-    // lhs(rhs)
-    // where rhs = range of fields => start..end
-    NODE_VARIANT_NAMED,
+    // token(lhs, rhs)
+    // where lhs and rhs are NODE_FIELD
+    NODE_VARIANT_TWO,
+    // token(lhs..rhs)
+    // where lhs and rhs are NODE_FIELD
+    NODE_VARIANT,
 
     // (args) -> return_type "calling_convention"
     NODE_FUNC_PROTO,

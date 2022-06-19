@@ -18,6 +18,14 @@
         _body                                                     \
     }
 
+#define push_scratch(_scratch_top)                              \
+    do {                                                        \
+        foreach_scratch(_scratch_top, elem, {                   \
+            add_node(parser, elem.kind, elem.token, elem.data); \
+        });                                                     \
+        parser->scratch_top = _scratch_top;                     \
+    } while (0)
+
 /// Internal data structure used to parse a source string
 typedef struct Parser {
     // Parsing
@@ -247,9 +255,7 @@ static Index parse_struct(Parser *parser)
     /*     add_node(parser, field.kind, field.token, field.data); */
     /* } */
 
-    foreach_scratch(scratch_top, field, {
-        add_node(parser, field.kind, field.token, field.data);
-    });
+    push_scratch(scratch_top);
 
     Index end = array_length(parser->nodes.kind) - 1;
 
@@ -363,9 +369,7 @@ static int parse_function_params(Parser *parser, Range *range)
     /*     add_node(parser, param.kind, param.token, param.data); */
     /* } */
 
-    foreach_scratch(scratch_top, param, {
-        add_node(parser, param.kind, param.token, param.data);
-    });
+    push_scratch(scratch_top);
 
     Index end = array_length(parser->nodes.kind) - 1;
 

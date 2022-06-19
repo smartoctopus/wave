@@ -186,16 +186,21 @@ static Index parse_block(Parser *parser)
     return result;
 }
 
+#define STRUCT_EXAMPLE "\n\n    foo :: struct {\n" \
+                       "        bar: int\n"        \
+                       "        baz: float\n"      \
+                       "    }\n"
+
 static Index parse_struct(Parser *parser)
 {
     Index token = index();
     assert(current() == TOKEN_STRUCT);
     advance();
 
-    bool found = expect(TOKEN_LBRACE, "I was expecting an opening left brace after the struct keyword. Try adding it!");
-    if (!found) {
+    bool found
+        = expect(TOKEN_LBRACE, "I was expecting an opening brace after the struct keyword. Try adding it!\n\n" STRUCT_EXAMPLE);
+    if (!found)
         return invalid;
-    }
 
     size_t scratch_top = parser->scratch_top;
     Index result = reserve_node(parser);
@@ -204,32 +209,31 @@ static Index parse_struct(Parser *parser)
 
     skip_newlines(parser);
     while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
-        Index identifier = index();
-        expect(TOKEN_IDENTIFIER, "You can write a struct field like:\n\n"
-                                 "    foo: int\n\n"
+        // Field name
+        Index name = index();
+        expect(TOKEN_IDENTIFIER, "You can write a struct field like:" STRUCT_EXAMPLE "\n"
                                  "Probably you are trying to use a keyword as the field name");
-        expect(TOKEN_COLON, "Every field of a struct should have a type, like:\n\n"
-                            "    foo :: struct {"
-                            "        bar: int\n"
-                            "    }\n\n"
+
+        // Field type
+        expect(TOKEN_COLON, "Every field of a struct should have a type, like:" STRUCT_EXAMPLE "\n"
                             "Try adding the type to the field");
         Index type = parse_type(parser);
 
         Node field = {
             .kind = NODE_FIELD,
-            .token = identifier,
+            .token = name,
             .data = {
-                .binary = { .lhs = identifier, .rhs = type },
+                .binary = { .lhs = name, .rhs = type },
             },
         };
         // array_push(fields, field);
         add_scratch(parser, field);
         count++;
 
-        expect(TOKEN_NEWLINE, "Every field of a struct must end with a newline. For example:\n\n"
-                              "    foo :: struct {\n"
-                              "        bar: int\n"
-                              "        baz: float\n\n"
+        if (current() == TOKEN_RBRACE || current() == TOKEN_EOF)
+            break;
+
+        expect(TOKEN_NEWLINE, "Every field of a struct must end with a newline. For example:" STRUCT_EXAMPLE "\n"
                               "Try adding a newline");
         skip_newlines(parser);
     }
@@ -267,6 +271,8 @@ static Index parse_struct(Parser *parser)
 
     return result;
 }
+
+#undef STRUCT_EXAMPLE
 
 static int parse_function_params(Parser *parser, Range *range)
 {

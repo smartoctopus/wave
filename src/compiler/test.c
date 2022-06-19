@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+#include "ast.h"
+#include "vfs.h"
 #define UTIL_IMPL
 #include "util.h"
 
@@ -218,7 +220,12 @@ test("Wave compiler")
         static Ast ast = { 0 };
         after_each()
         {
+            if (array_length(ast.diagnostics) > 0) {
+                emit_diagnostics(ast.diagnostics);
+            }
             free_ast(ast);
+            ast = (Ast) { 0 };
+            vfs_cleanup();
         }
 
         it("should parse an empty string")
@@ -230,7 +237,9 @@ test("Wave compiler")
 
         it("should parse a function without parameters")
         {
-            ast = parse(0, stringview_from_cstr("main :: () {\n}"));
+            stringview content = stringview_from_cstr("main :: () {\n}");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             expect(ast.nodes.kind[1] == NODE_CONST);
             Index func = ast.nodes.data[1].variable.expr;
             expect(ast.nodes.kind[func] == NODE_FUNC);
@@ -254,7 +263,8 @@ test("Wave compiler")
         {
             // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("main :: (args: ) {\n}\n");
-            ast = parse(0, content);
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             Index func = ast.nodes.data[1].variable.expr;
             Index index = ast.nodes.data[func].func.func_proto;
             Index proto_index = ast.nodes.data[index].func_proto.proto;
@@ -269,7 +279,8 @@ test("Wave compiler")
         {
             // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("main :: (arg1: , arg2: , arg3: , arg4: , arg5: , arg6: ) {\n}\n");
-            ast = parse(0, content);
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             Index func = ast.nodes.data[1].variable.expr;
             Index index = ast.nodes.data[func].func.func_proto;
             Index proto_index = ast.nodes.data[index].func_proto.proto;
@@ -294,7 +305,8 @@ test("Wave compiler")
         it("should parse a structure without fields")
         {
             stringview content = stringview_from_cstr("foo :: struct {}\n");
-            ast = parse(0, content);
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             Index aggregate = ast.nodes.data[1].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
@@ -306,7 +318,8 @@ test("Wave compiler")
         it("should parse a structure with one field")
         {
             stringview content = stringview_from_cstr("foo :: struct {bar: \n}\n");
-            ast = parse(0, content);
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             Index aggregate = ast.nodes.data[1].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
@@ -318,7 +331,8 @@ test("Wave compiler")
         it("should parse a structure with two field")
         {
             stringview content = stringview_from_cstr("foo :: struct {bar: \n baz:\n}\n");
-            ast = parse(0, content);
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
             Index aggregate = ast.nodes.data[1].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;

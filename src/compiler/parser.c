@@ -177,7 +177,7 @@ static Index parse_block(Parser *parser)
         }
     }
 
-    advance();
+    unused(match(TOKEN_RBRACE));
 
     Range range = { start, end };
 
@@ -234,7 +234,7 @@ static Index parse_struct(Parser *parser)
         skip_newlines(parser);
     }
 
-    advance();
+    unused(match(TOKEN_RBRACE));
 
     Index start = array_length(parser->nodes.kind);
 
@@ -335,7 +335,7 @@ static int parse_function_params(Parser *parser, Range *range)
         }
 
         // NOTE: should we actually exit right here when we encounter TOKEN_EOF
-        if (match(TOKEN_RPAREN) || current() == TOKEN_EOF)
+        if (current() == TOKEN_RPAREN || current() == TOKEN_EOF)
             break;
 
         expect(TOKEN_COMMA, "I was expecting a comma after the parameter, like:\n\n"
@@ -343,6 +343,8 @@ static int parse_function_params(Parser *parser, Range *range)
                             "Try adding it");
         skip_newlines(parser);
     }
+
+    expect(TOKEN_RPAREN, "I was expecting a closing parenthesis after the function parameters. Try adding it!");
 
     Index start = array_length(parser->nodes.kind);
 
@@ -381,8 +383,6 @@ static Index parse_function(Parser *parser)
         parser->token_index = start;
         return invalid;
     }
-
-    expect(TOKEN_RPAREN, "I was expecting a closing paranthesis after the function parameters. Try adding it!");
 
     Index return_type = invalid;
     if (match(TOKEN_ARROW)) {

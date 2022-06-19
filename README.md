@@ -5,4 +5,4 @@ The Wave programming langauge
 The standard library is licensed under the MIT License. The compiler is licensed under the Apache 2.0 License.
 
 ## Project Status
-This language is under heavy development. Use it at your onw risk!
+This language is under heavy development. Use it at your own risk!

@@ -289,11 +289,15 @@ static int parse_function_params(Parser *parser, Range *range)
 
     bool vararg = false;
 
+    // This variable is needed to use VARPARAM only for one parameter
+    bool use_vararg = true;
+
     while (current() == TOKEN_IDENTIFIER) {
         if (vararg) {
             error_at_current(parser, "found parameter after vararg", "", "I already found a variadic parameter, but now I found a normal parameter. There can only be one variadic parameter at the end of the parameter list. For example:\n\n"
                                                                          "    foo :: (bar: int, baz: ...any)\n\n"
                                                                          "Try moving your variadic paramter at the end of the parameter list");
+            use_vararg = false;
         }
 
         Index identifier = index();
@@ -311,7 +315,7 @@ static int parse_function_params(Parser *parser, Range *range)
             }
 
             Node param = {
-                .kind = vararg ? NODE_VARPARAM : NODE_PARAM,
+                .kind = use_vararg && vararg ? NODE_VARPARAM : NODE_PARAM,
                 .token = identifier,
                 .data = {
                     .param = { type, expr },

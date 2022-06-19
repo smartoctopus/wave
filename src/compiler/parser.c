@@ -47,6 +47,11 @@ typedef struct Parser {
 
 enum { invalid = 0 };
 
+static Index parse_type(Parser *parser);
+static Index parse_expr(Parser *parser);
+static Index parse_stmt(Parser *parser);
+static void parse_decls(Parser *parser);
+
 static Index add_node(Parser *parser, NodeKind kind, Index token, Data data)
 {
     array_push(parser->nodes.kind, kind);
@@ -60,7 +65,7 @@ static alwaysinline Index reserve_node(Parser *parser)
     return add_node(parser, NODE_INVALID, 0, (Data) { 0 });
 }
 
-static void set_node(Parser *parser, Index index, NodeKind kind, Index token, Data data)
+static inline void set_node(Parser *parser, Index index, NodeKind kind, Index token, Data data)
 {
     parser->nodes.kind[index] = kind;
     parser->nodes.token[index] = token;
@@ -78,13 +83,13 @@ static void pop_node(Parser *parser, Index index)
     unused(array_pop(parser->nodes.data));
 }
 
-static void add_scratch(Parser *parser, Node scratch_node)
+static inline void add_scratch(Parser *parser, Node scratch_node)
 {
     array_push(parser->scratch, scratch_node);
     parser->scratch_top++;
 }
 
-static bool __match(Parser *parser, TokenKind kind)
+static inline bool __match(Parser *parser, TokenKind kind)
 {
     if (current() == kind) {
         advance();
@@ -135,10 +140,6 @@ static void skip_newlines(Parser *parser)
         advance();
     }
 }
-
-static Index parse_type(Parser *parser);
-static Index parse_expr(Parser *parser);
-static Index parse_stmt(Parser *parser);
 
 static Index parse_type(Parser *parser)
 {

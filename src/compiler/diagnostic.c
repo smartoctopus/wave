@@ -209,10 +209,17 @@ static void emit_diagnostic(Diagnostic diag)
     if (diag.hint != NULL) {
         fprintf(stderr, COLOR_UWHITE "Hint" COLOR_RESET ": %s\n", diag.hint);
     }
+}
 
-    xfree(diag.message);
-    xfree(diag.label);
-    xfree(diag.hint);
+void free_diagnostics(array(Diagnostic) * diags)
+{
+    for (size_t i = 0; i < array_length(*diags); ++i) {
+        Diagnostic diag = *diags[i];
+        xfree(diag.message);
+        xfree(diag.label);
+        xfree(diag.hint);
+    }
+    array_free(*diags);
 }
 
 void emit_diagnostics(array(Diagnostic) diags)
@@ -220,6 +227,4 @@ void emit_diagnostics(array(Diagnostic) diags)
     for (size_t i = 0; i < array_length(diags); ++i) {
         emit_diagnostic(diags[i]);
     }
-
-    array_free(diags);
 }

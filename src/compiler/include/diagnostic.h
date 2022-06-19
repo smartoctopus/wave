@@ -62,6 +62,7 @@ alwaysinline Diagnostic warn(Span span, char const *message, char const *label, 
     };
 }
 
-void emit_diagnostics(array(Diagnostic) diagnostics);
+void emit_diagnostics(array(Diagnostic) diags);
+void free_diagnostics(array(Diagnostic) * diags);
 
 #endif // DIAGNOSTIC_H_

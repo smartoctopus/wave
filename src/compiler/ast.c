@@ -9,7 +9,7 @@ void free_ast(Ast ast)
     array_free(ast.nodes.token);
     array_free(ast.nodes.extra);
     array_free(ast.decls);
-    array_free(ast.diagnostics);
+    free_diagnostics(&ast.diagnostics);
 }
 
 uint32_t __add_extra(char **buf, void *data, size_t len)

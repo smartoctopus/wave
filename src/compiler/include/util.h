@@ -102,7 +102,7 @@ extern void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line)
 
 #define xmalloc(n) _xmalloc((n), __FILE__, __LINE__)
 #define xrealloc(p, n) _xrealloc((p), (n), __FILE__, __LINE__)
-#define xfree(p) unused((p) != NULL ? (free((void *)(p)), 0) : 0)
+#define xfree(p) unused((p) != NULL ? (free((void *)(p)), (p) = NULL, 0) : 0)
 
 // Memory functions
 void memswap(void *a, void *b, size_t size);

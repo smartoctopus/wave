@@ -53,6 +53,11 @@ typedef struct Parser {
     size_t scratch_top;
 } Parser;
 
+typedef enum ImportKind {
+    IMPORT_NORMAL,
+    IMPORT_FOREIGN,
+} ImportKind;
+
 enum { invalid = 0 };
 
 static Index parse_type(Parser *parser);
@@ -685,6 +690,16 @@ static Index parse_init(Parser *parser, Index identifier)
     }
 }
 
+static Index parse_import(Parser *parser, ImportKind kind)
+{
+    Index keyword = index();
+    assert(current() == TOKEN_IMPORT);
+    advance();
+    unused(keyword);
+    unused(kind);
+    return invalid;
+}
+
 static Index parse_decl(Parser *parser)
 {
     skip_newlines(parser);
@@ -706,8 +721,44 @@ static Index parse_decl(Parser *parser)
     case TOKEN_WHEN: {
         // FIXME: when directives
     } break;
+    case TOKEN_USING: {
+        // FIXME: using
+    } break;
+    case TOKEN_IMPORT: {
+        return parse_import(parser, IMPORT_NORMAL);
+    } break;
     case TOKEN_FOREIGN: {
-        // FIXME: foreign blocks
+        Index foreign = index();
+        advance();
+
+        if (current() == TOKEN_IMPORT)
+            return parse_import(parser, IMPORT_FOREIGN);
+
+        bool found = expect(TOKEN_LBRACE, "");
+        if (!found)
+            return invalid;
+
+        Index result = reserve_node(parser);
+
+        if (match(TOKEN_RBRACE)) {
+            set_node(parser, result, NODE_FOREIGN, foreign, (Data) {
+                                                                .block = { 0 },
+                                                            });
+            return result;
+        }
+
+        Index start = array_length(parser->nodes.kind);
+
+        parse_decls(parser);
+
+        Index end = array_length(parser->nodes.kind) - 1;
+
+        unused(match(TOKEN_RBRACE));
+
+        set_node(parser, result, NODE_FOREIGN, foreign, (Data) {
+                                                            .block = { start, end },
+                                                        });
+        return result;
     } break;
     case TOKEN_BAD: {
         advance();

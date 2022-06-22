@@ -73,7 +73,7 @@ typedef enum NodeKind {
     NODE_FOREIGN,
 
     // @token(range) postfix
-    NODE_COMPTIME,
+    NODE_MACRO_CALL,
 
     // token expr body
     NODE_IF_SIMPLE,

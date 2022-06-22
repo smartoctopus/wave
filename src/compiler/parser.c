@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "lexer.h"
 
 /* TODO:
  * handle newlines correctly
@@ -149,6 +148,7 @@ static bool __expect(Parser *parser, TokenKind kind, char const *hint)
     return false;
 }
 
+// TODO: improve next_decl
 static void next_decl(Parser *parser)
 {
     while (current() != TOKEN_IDENTIFIER && (peek(1) == TOKEN_COLON_COLON || peek(1) == TOKEN_COLON || peek(1) == TOKEN_COLON_EQ)) {

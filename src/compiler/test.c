@@ -419,6 +419,92 @@ test("Wave compiler")
                 count++;
             }
         }
+
+        it("should parse a simple import")
+        {
+            stringview content = stringview_from_cstr("import foo");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_IMPORT);
+            expect(ast.nodes.token[import] == 1);
+        }
+
+        it("should parse an import with as")
+        {
+            stringview content = stringview_from_cstr("import foo as bar");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_IMPORT);
+            expect(ast.nodes.token[import] == 1);
+            expect(ast.nodes.data[import].binary.lhs == 3);
+        }
+
+        it("should parse a complex import")
+        {
+            stringview content = stringview_from_cstr("import foo { baz, fizzbuzz } as bar");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_IMPORT_COMPLEX);
+            expect(ast.nodes.token[import] == 1);
+            Index index = ast.nodes.data[import].binary.rhs;
+            expect(ast.nodes.kind[index] == NODE_RANGE);
+            Range range = ast.nodes.data[index].range;
+            Index start = range.start;
+            Index end = range.end;
+            int count = 1;
+            for (Index i = start; i <= end; i += 2) {
+                char const *str = strf("%d symbol", count);
+                expect_str(ast.token_kind[i] == TOKEN_IDENTIFIER, str);
+                xfree(str);
+                count++;
+            }
+        }
+
+        it("should parse a simple foreign import")
+        {
+            stringview content = stringview_from_cstr("foreign import foo");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_FOREIGN_IMPORT);
+            expect(ast.nodes.token[import] == 2);
+        }
+
+        it("should parse a foreign import with as")
+        {
+            stringview content = stringview_from_cstr("foreign import foo as bar");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_FOREIGN_IMPORT);
+            expect(ast.nodes.token[import] == 2);
+            expect(ast.nodes.data[import].binary.lhs == 4);
+        }
+
+        it("should parse a complex foreign import")
+        {
+            stringview content = stringview_from_cstr("foreign import foo { baz, fizzbuzz } as bar");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_FOREIGN_IMPORT_COMPLEX);
+            expect(ast.nodes.token[import] == 2);
+            Index index = ast.nodes.data[import].binary.rhs;
+            expect(ast.nodes.kind[index] == NODE_RANGE);
+            Range range = ast.nodes.data[index].range;
+            Index start = range.start;
+            Index end = range.end;
+            int count = 1;
+            for (Index i = start; i <= end; i += 2) {
+                char const *str = strf("%d symbol", count);
+                expect_str(ast.token_kind[i] == TOKEN_IDENTIFIER, str);
+                xfree(str);
+                count++;
+            }
+        }
     }
 
     describe("Diagnostics")

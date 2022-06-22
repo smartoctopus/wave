@@ -713,14 +713,59 @@ static Index parse_init(Parser *parser, Index identifier)
     }
 }
 
-static Index parse_import(Parser *parser, ImportKind kind)
+// TODO: add test for import foo { ... }
+static Index parse_import(Parser *parser, ImportKind import_kind)
 {
-    Index keyword = index();
     assert(current() == TOKEN_IMPORT);
     advance();
-    unused(keyword);
-    unused(kind);
-    return invalid;
+
+    Index result = reserve_node(parser);
+
+    Index module = index();
+    advance();
+
+    Index list = invalid;
+    if (match(TOKEN_LBRACE)) {
+        list = reserve_node(parser);
+        Range list_range = parse_name_list(parser);
+        if (list_range.start == list_range.end) {
+            if (match(TOKEN_ELLIPSIS)) {
+                // NOTE: 1 is the first declaration which will be always reserved when we get here (parse_decl always reserves before parsing)
+                // This means that we can use 1 to say that we want to import all of the symbols contained in the module
+                list = 1;
+            } else {
+                char const *label = strf("found %s", token_to_string(current()));
+                error_at_current(parser, "expected either an identifier or ...", label, "I can only understand these two type of complex imports:\n\n"
+                                                                                        "    import foo { bar, baz }\n"
+                                                                                        "    import foo { ... }\n\n"
+                                                                                        "Try making your import look like this");
+                xfree(label);
+            }
+        }
+        set_node(parser, list, NODE_RANGE, invalid, (Data) { .range = list_range });
+
+        expect(TOKEN_RBRACE, "");
+    }
+
+    Index as_name = invalid;
+    if (match(TOKEN_AS)) {
+        as_name = index();
+        advance();
+    }
+
+    if (list != invalid) {
+        NodeKind kind = import_kind == IMPORT_FOREIGN ? NODE_FOREIGN_IMPORT_COMPLEX : NODE_IMPORT_COMPLEX;
+        set_node(parser, result, kind, module, (Data) {
+                                                   .binary = { .lhs = as_name, .rhs = list },
+                                               });
+    } else {
+        NodeKind kind = import_kind == IMPORT_FOREIGN ? NODE_FOREIGN_IMPORT : NODE_IMPORT;
+        set_node(parser, result, kind, module, (Data) {
+                                                   .binary = { .lhs = as_name },
+                                               });
+    }
+
+    return result;
 }
 
 static Index parse_decl(Parser *parser)

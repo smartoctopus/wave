@@ -25,6 +25,13 @@ typedef enum NodeKind {
     NODE_INVALID = -1,
     NODE_ROOT,
 
+    // import token as lhs
+    NODE_IMPORT,
+    NODE_FOREIGN_IMPORT,
+    // import token {rhs} as lhs
+    NODE_IMPORT_COMPLEX,
+    NODE_FOREIGN_IMPORT_COMPLEX,
+
     // Generic decl
     NODE_GENERIC,
     // GenericOne decl

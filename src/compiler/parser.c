@@ -638,6 +638,20 @@ static Index parse_expr(Parser *parser)
     return lhs;
 }
 
+static Range parse_name_list(Parser *parser)
+{
+    Index start = index();
+
+    while (current() != TOKEN_EOF && match(TOKEN_IDENTIFIER)) {
+        if (current() != TOKEN_COMMA)
+            break;
+        advance();
+    }
+
+    Index end = index();
+    return (Range) { start, end };
+}
+
 // Parse an initialization:
 //   - foo :: 5
 //   - foo := 5

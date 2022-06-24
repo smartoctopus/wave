@@ -240,8 +240,8 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("main :: () {\n}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            expect(ast.nodes.kind[1] == NODE_CONST);
-            Index func = ast.nodes.data[1].variable.expr;
+            expect(ast.nodes.kind[2] == NODE_CONST);
+            Index func = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[func] == NODE_FUNC);
             // Function prototype
             Index index = ast.nodes.data[func].func.func_proto;
@@ -265,7 +265,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("main :: (args: ) {\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index func = ast.nodes.data[1].variable.expr;
+            Index func = ast.nodes.data[2].variable.expr;
             Index index = ast.nodes.data[func].func.func_proto;
             Index proto_index = ast.nodes.data[index].func_proto.proto;
             FuncProtoOne func_proto = get_extra(ast.nodes.extra, FuncProtoOne, proto_index);
@@ -281,7 +281,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("main :: (arg1: , arg2: , arg3: , arg4: , arg5: , arg6: ) {\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index func = ast.nodes.data[1].variable.expr;
+            Index func = ast.nodes.data[2].variable.expr;
             Index index = ast.nodes.data[func].func.func_proto;
             Index proto_index = ast.nodes.data[index].func_proto.proto;
             FuncProto func_proto = get_extra(ast.nodes.extra, FuncProto, proto_index);
@@ -307,7 +307,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: struct {}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -320,7 +320,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: struct {bar: \n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -333,7 +333,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: struct {bar: \n baz:\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -347,7 +347,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: struct {a: \n b: \nc: \n}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_STRUCT);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -365,7 +365,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: enum {}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -379,7 +379,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: enum {hello}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
@@ -390,15 +390,17 @@ test("Wave compiler")
         it("should parse an enum with two variants")
         {
             // stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
-            stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
+            // stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
+            stringview content = stringview_from_cstr("foo :: enum {hello\n world}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_ENUM_TWO);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
             expect(end - start == 1);
-            expect(ast.nodes.kind[start] == NODE_VARIANT_TWO);
+            // expect(ast.nodes.kind[start] == NODE_VARIANT_TWO);
+            expect(ast.nodes.kind[start] == NODE_VARIANT_SIMPLE);
             expect(ast.nodes.kind[end] == NODE_VARIANT_SIMPLE);
         }
 
@@ -407,7 +409,7 @@ test("Wave compiler")
             stringview content = stringview_from_cstr("foo :: enum {hello,\n world\nto\nall\nof\nyou}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            Index aggregate = ast.nodes.data[1].variable.expr;
+            Index aggregate = ast.nodes.data[2].variable.expr;
             expect(ast.nodes.kind[aggregate] == NODE_ENUM);
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;

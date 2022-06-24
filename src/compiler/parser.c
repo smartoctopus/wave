@@ -152,7 +152,7 @@ static Span span(Parser *parser, Index first, Index last)
     return (Span) {
         .file_id = parser->file_id,
         .start = parser->token_start[first],
-        .end = parser->token_start[last] + token_length(token),
+        .end = parser->token_start[last] + token_length(token) - 1, // NOTE: this -1 is temporary: search why this is needed
     };
 }
 
@@ -345,7 +345,13 @@ static Node parse_enum_variant(Parser *parser)
             Index rhs = invalid;
             if (match(TOKEN_COLON)) {
                 if (parser->nodes.kind[lhs] != NODE_IDENTIFIER) {
-                    // FIXME: report error lhs
+                    char const *label = strf("found %s", token_to_string(parser->token_kind[lhs]));
+                    error_at(parser, parser->nodes.token[lhs], "expected an identifier", label, "While I was trying to understand this enum variant I was expecting the left-hand side of the colon to be an identifier, while in the right-hand side of the colon I was expecting a type. For example:\n\n"
+                                                                                                "    foo :: enum {\n"
+                                                                                                "        bar(ident: string)\n"
+                                                                                                "    }\n\n"
+                                                                                                "Try making your variant look like this");
+                    xfree(label);
                 }
                 rhs = parse_type(parser);
             }
@@ -364,10 +370,13 @@ static Node parse_enum_variant(Parser *parser)
 
             // NOTE: is this needed?
             skip_newlines(parser);
-            bool comma = expect(TOKEN_COMMA, "");
-            if (!comma) {
-                // FIXME: handle this condition
-            }
+            expect(TOKEN_COMMA, "I can only understand these types of enum variants:\n\n"
+                                "    foo :: enum {\n"
+                                "        first\n"
+                                "        second = 2\n"
+                                "        third(int)\n"
+                                "        fourth(a: int, b: string)\n"
+                                "    }\n");
             skip_newlines(parser);
         }
 
@@ -376,16 +385,24 @@ static Node parse_enum_variant(Parser *parser)
         expr = parse_expr(parser);
     }
 
-    if (count == 0) {
-        // FIXME: report error
-    }
-
     if (count == -1) {
         return (Node) {
             .kind = NODE_VARIANT_SIMPLE,
             .token = name,
             .data = { .binary = { .lhs = expr } },
         };
+    }
+
+    if (count == 0) {
+        Index rparen = index() - 1;
+        error_span(parser, span(parser, name, rparen), "invalid enum variant", "there aren't any fields between the parenthesis", "An enum variant is invalid if it is written like:\n\n"
+                                                                                                                                  "    foo :: enum {\n"
+                                                                                                                                  "        bar()\n"
+                                                                                                                                  "    }\n\n"
+                                                                                                                                  "Instead of opening and closing the parenthesis, you can directly write an enum variant like:\n\n"
+                                                                                                                                  "    foo :: enum {\n"
+                                                                                                                                  "        bar\n"
+                                                                                                                                  "    }\n\n");
     }
 
     Index start = array_length(parser->nodes.kind);
@@ -773,9 +790,10 @@ static Index parse_import(Parser *parser, ImportKind import_kind)
                 xfree(label);
             }
         }
-        set_node(parser, list, NODE_RANGE, invalid, (Data) { .range = list_range });
 
-        expect(TOKEN_RBRACE, "");
+        expect(TOKEN_RBRACE, "At the end of a symbol list it's required a closing brace, like:\n\n"
+                             "    import foo { bar, baz }\n\n"
+                             "Try adding it");
     }
 
     Index as_name = invalid;
@@ -833,7 +851,13 @@ static Index parse_decl(Parser *parser)
         if (current() == TOKEN_IMPORT)
             return parse_import(parser, IMPORT_FOREIGN);
 
-        bool found = expect(TOKEN_LBRACE, "");
+        bool found = expect(TOKEN_LBRACE, "I expected a foreign declaration, like:\n\n"
+                                          "    foreign {\n"
+                                          "        bar :: () -> rawptr\n"
+                                          "    }\n\n"
+                                          "Or a foreign import, like:\n\n"
+                                          "    foreign import sdl\n\n"
+                                          "Try making your foreign declaration look like one of these two");
         if (!found)
             return invalid;
 
@@ -863,7 +887,16 @@ static Index parse_decl(Parser *parser)
         advance();
     } break;
     default: {
-        // FIXME: Report an error
+        error_at_current(parser, "invalid declaration", "", "Try writing some declarations like:\n\n"
+                                                            "    import os\n\n"
+                                                            "    foo :: struct {\n"
+                                                            "        bar: int\n"
+                                                            "        baz: float\n"
+                                                            "    }\n\n"
+                                                            "    main :: () {\n"
+                                                            "        value := foo(bar: 1, baz: 1.0)\n"
+                                                            "        println(\"value is {}\", value)\n"
+                                                            "    }\n");
     } break;
     }
     return invalid;

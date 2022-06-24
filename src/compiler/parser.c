@@ -119,18 +119,41 @@ static inline bool __match(Parser *parser, TokenKind kind)
     return false;
 }
 
-static void error_at_current(Parser *parser, char const *message, char const *label, char const *hint)
+static inline void error_span(Parser *parser, Span span, char const *message, char const *label, char const *hint)
 {
-    size_t start = parser->token_start[parser->token_index];
-    Token token = { .start = parser->str + start, .kind = current() };
+    Diagnostic diag = error(span, message, label, hint);
+    array_push(parser->diagnostics, diag);
+}
+
+static flatten void error_at(Parser *parser, Index index, char const *message, char const *label, char const *hint)
+{
+    size_t start = parser->token_start[index];
+    Token token = { .start = parser->str + start, .kind = parser->token_kind[index] };
     Span span = {
         .file_id = parser->file_id,
         .start = start,
         .end = start + token_length(token),
     };
 
-    Diagnostic diag = error(span, message, label, hint);
-    array_push(parser->diagnostics, diag);
+    error_span(parser, span, message, label, hint);
+}
+
+static alwaysinline void error_at_current(Parser *parser, char const *message, char const *label, char const *hint)
+{
+    error_at(parser, index(), message, label, hint);
+}
+
+/// Create a Span, where:
+///   - .start = start of the token at index 'first'
+///   - .end   = end of the token at index 'last'
+static Span span(Parser *parser, Index first, Index last)
+{
+    Token token = { .start = parser->str + parser->token_start[last], .kind = parser->token_kind[last] };
+    return (Span) {
+        .file_id = parser->file_id,
+        .start = parser->token_start[first],
+        .end = parser->token_start[last] + token_length(token),
+    };
 }
 
 static bool __expect(Parser *parser, TokenKind kind, char const *hint)

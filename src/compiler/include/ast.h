@@ -32,6 +32,9 @@ typedef enum NodeKind {
     NODE_IMPORT_COMPLEX,
     NODE_FOREIGN_IMPORT_COMPLEX,
 
+    // ...
+    NODE_ALL_SYMBOLS,
+
     // Generic decl
     NODE_GENERIC,
     // GenericOne decl

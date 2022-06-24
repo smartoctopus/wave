@@ -463,6 +463,18 @@ test("Wave compiler")
             }
         }
 
+        it("should parse an import with { ... }")
+        {
+            stringview content = stringview_from_cstr("import foo { ... }");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_IMPORT_COMPLEX);
+            expect(ast.nodes.token[import] == 1);
+            Index index = ast.nodes.data[import].binary.rhs;
+            expect(ast.nodes.kind[index] == NODE_ALL_SYMBOLS);
+        }
+
         it("should parse a simple foreign import")
         {
             stringview content = stringview_from_cstr("foreign import foo");
@@ -504,6 +516,18 @@ test("Wave compiler")
                 xfree(str);
                 count++;
             }
+        }
+
+        it("should parse a foreign import with { ... }")
+        {
+            stringview content = stringview_from_cstr("foreign import foo { ... }");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            Index import = 1;
+            expect(ast.nodes.kind[import] == NODE_FOREIGN_IMPORT_COMPLEX);
+            expect(ast.nodes.token[import] == 2);
+            Index index = ast.nodes.data[import].binary.rhs;
+            expect(ast.nodes.kind[index] == NODE_ALL_SYMBOLS);
         }
     }
 

@@ -483,6 +483,8 @@ static Index parse_enum(Parser *parser)
     return result;
 }
 
+// NOTE: Should we accept the following?
+//     foo :: (args: ...any, flag: bool, integer := 0)
 static int parse_function_params(Parser *parser, Range *range)
 {
     assert(current() == TOKEN_LPAREN);

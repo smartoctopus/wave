@@ -317,6 +317,7 @@ test("Wave compiler")
 
         it("should parse a structure with one field")
         {
+            // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("foo :: struct {bar: \n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
@@ -330,6 +331,7 @@ test("Wave compiler")
 
         it("should parse a structure with two field")
         {
+            // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("foo :: struct {bar: \n baz:\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
@@ -344,6 +346,7 @@ test("Wave compiler")
 
         it("should parse a structure with multiple fields")
         {
+            // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("foo :: struct {a: \n b: \nc: \n}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
@@ -375,6 +378,7 @@ test("Wave compiler")
 
         it("should parse an enum with one variant")
         {
+            // FIXME: when we can parse the types check them
             // stringview content = stringview_from_cstr("foo :: enum {hello = 1}");
             stringview content = stringview_from_cstr("foo :: enum {hello}");
             FileId id = add_file("test.wave", content);
@@ -389,6 +393,7 @@ test("Wave compiler")
 
         it("should parse an enum with two variants")
         {
+            // FIXME: when we can parse the types check them
             // stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
             // stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
             stringview content = stringview_from_cstr("foo :: enum {hello\n world}");
@@ -406,6 +411,7 @@ test("Wave compiler")
 
         it("should parse an enum with multiple variants")
         {
+            // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("foo :: enum {hello,\n world\nto\nall\nof\nyou}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);

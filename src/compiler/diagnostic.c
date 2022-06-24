@@ -139,9 +139,10 @@ static void print_snippet(stringview content, Diagnostic diag)
     fprintf(stderr, COLOR_RED);
 
     if (content.str + span.end <= line.str + line.length) {
-        while (line.str <= content.str + span.end) {
+        size_t count = span.start;
+        while (count < span.end) {
             fprintf(stderr, UNDERLINE_CHAR);
-            line.str++;
+            count++;
         }
 
         fprintf(stderr, COLOR_RESET " %s\n", diag.label);
@@ -181,6 +182,8 @@ static void print_snippet(stringview content, Diagnostic diag)
 
     fprintf(stderr, COLOR_RESET " %s\n", diag.label);
 }
+
+#undef UNDERLINE_CHAR
 
 static void emit_diagnostic(Diagnostic diag)
 {

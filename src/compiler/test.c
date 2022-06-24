@@ -455,9 +455,9 @@ test("Wave compiler")
             Index start = range.start;
             Index end = range.end;
             int count = 1;
-            for (Index i = start; i <= end; i += 2) {
+            for (Index i = start; i <= end; ++i) {
                 char const *str = strf("%d symbol", count);
-                expect_str(ast.token_kind[i] == TOKEN_IDENTIFIER, str);
+                expect_str(ast.nodes.kind[i] == NODE_IDENTIFIER, str);
                 xfree(str);
                 count++;
             }
@@ -498,9 +498,9 @@ test("Wave compiler")
             Index start = range.start;
             Index end = range.end;
             int count = 1;
-            for (Index i = start; i <= end; i += 2) {
+            for (Index i = start; i <= end; ++i) {
                 char const *str = strf("%d symbol", count);
-                expect_str(ast.token_kind[i] == TOKEN_IDENTIFIER, str);
+                expect_str(ast.nodes.kind[i] == NODE_IDENTIFIER, str);
                 xfree(str);
                 count++;
             }

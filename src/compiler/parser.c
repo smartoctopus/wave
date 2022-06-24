@@ -255,9 +255,10 @@ static Index parse_struct(Parser *parser)
     skip_newlines(parser);
     while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
         // Field name
-        Index name = index();
+        Index name_token = index();
         expect(TOKEN_IDENTIFIER, "You can write a struct field like:" STRUCT_EXAMPLE "\n"
                                  "Probably you are trying to use a keyword as the field name");
+        Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
 
         // Field type
         expect(TOKEN_COLON, "Every field of a struct should have a type, like:" STRUCT_EXAMPLE "\n"
@@ -325,9 +326,10 @@ static Index parse_struct(Parser *parser)
 static Node parse_enum_variant(Parser *parser)
 {
     // Field name
-    Index name = index();
+    Index name_token = index();
     expect(TOKEN_IDENTIFIER, "You can write a struct field like:" ENUM_EXAMPLE "\n"
                              "Probably you are trying to use a keyword as the field name");
+    Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
 
     int count = -1;
 
@@ -404,13 +406,12 @@ static Node parse_enum_variant(Parser *parser)
 
 static Index parse_enum(Parser *parser)
 {
-    Index token = index();
     assert(current() == TOKEN_ENUM);
     advance();
 
-    // NOTE: in this case the token corresponds to the type after the enum keyword
+    Index token = invalid;
     if (match(TOKEN_IDENTIFIER)) {
-        token = index() - 1;
+        token = parse_type(parser);
     }
 
     bool found = expect(TOKEN_LBRACE, "I was expecting an opening brace after the enum keyword. Try adding it!" ENUM_EXAMPLE);
@@ -491,8 +492,9 @@ static int parse_function_params(Parser *parser, Range *range)
             use_vararg = false;
         }
 
-        Index identifier = index();
+        Index name_token = index();
         advance();
+        Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
 
         if (match(TOKEN_COLON)) {
             if (match(TOKEN_ELLIPSIS)) {
@@ -507,7 +509,7 @@ static int parse_function_params(Parser *parser, Range *range)
 
             Node param = {
                 .kind = use_vararg && vararg ? NODE_VARPARAM : NODE_PARAM,
-                .token = identifier,
+                .token = name,
                 .data = {
                     .param = { type, expr },
                 },
@@ -590,7 +592,7 @@ static Index parse_function(Parser *parser)
 
     Index calling_convention = invalid;
     if (match(TOKEN_STRING)) {
-        calling_convention = index() - 1;
+        calling_convention = add_node(parser, NODE_STRING, index() - 1, (Data) { 0 });
     }
 
     skip_newlines(parser);
@@ -663,15 +665,19 @@ static Index parse_expr(Parser *parser)
 
 static Range parse_name_list(Parser *parser)
 {
-    Index start = index();
+    Index start = array_length(parser->nodes.kind);
 
     while (current() != TOKEN_EOF && match(TOKEN_IDENTIFIER)) {
+        add_node(parser, NODE_IDENTIFIER, index() - 1, (Data) { 0 });
         if (current() != TOKEN_COMMA)
             break;
         advance();
     }
 
-    Index end = index();
+    Index end = array_length(parser->nodes.kind) - 1;
+    if (end < start) {
+        return (Range) { 0 };
+    }
     return (Range) { start, end };
 }
 
@@ -750,12 +756,14 @@ static Index parse_import(Parser *parser, ImportKind import_kind)
     Index list = invalid;
     if (match(TOKEN_LBRACE)) {
         list = reserve_node(parser);
+
         Range list_range = parse_name_list(parser);
-        if (list_range.start == list_range.end) {
+
+        if (list_range.start != 0 && list_range.end != 0) {
+            set_node(parser, list, NODE_RANGE, invalid, (Data) { .range = list_range });
+        } else {
             if (match(TOKEN_ELLIPSIS)) {
-                // NOTE: 1 is the first declaration which will be always reserved when we get here (parse_decl always reserves before parsing)
-                // This means that we can use 1 to say that we want to import all of the symbols contained in the module
-                list = 1;
+                set_node(parser, list, NODE_ALL_SYMBOLS, index() - 1, (Data) { 0 });
             } else {
                 char const *label = strf("found %s", token_to_string(current()));
                 error_at_current(parser, "expected either an identifier or ...", label, "I can only understand these two type of complex imports:\n\n"
@@ -797,7 +805,7 @@ static Index parse_decl(Parser *parser)
 
     switch (current()) {
     case TOKEN_IDENTIFIER: {
-        Index identifier = index();
+        Index identifier = add_node(parser, NODE_IDENTIFIER, index() - 1, (Data) { 0 });
         advance();
 
         // FIXME: handle generics

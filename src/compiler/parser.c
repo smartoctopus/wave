@@ -483,8 +483,6 @@ static Index parse_enum(Parser *parser)
     return result;
 }
 
-// NOTE: Should we accept the following?
-//     foo :: (args: ...any, flag: bool, integer := 0)
 static int parse_function_params(Parser *parser, Range *range)
 {
     assert(current() == TOKEN_LPAREN);
@@ -500,17 +498,7 @@ static int parse_function_params(Parser *parser, Range *range)
 
     bool vararg = false;
 
-    // This variable is needed to use VARPARAM only for one parameter
-    bool use_vararg = true;
-
     while (current() == TOKEN_IDENTIFIER) {
-        if (vararg) {
-            error_at_current(parser, "found parameter after vararg", "", "I already found a variadic parameter, but now I found a normal parameter. There can only be one variadic parameter at the end of the parameter list. For example:\n\n"
-                                                                         "    foo :: (bar: int, baz: ...any)\n\n"
-                                                                         "Try moving your variadic paramter at the end of the parameter list");
-            use_vararg = false;
-        }
-
         Index name_token = index();
         advance();
         Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
@@ -527,12 +515,13 @@ static int parse_function_params(Parser *parser, Range *range)
             }
 
             Node param = {
-                .kind = use_vararg && vararg ? NODE_VARPARAM : NODE_PARAM,
+                .kind = vararg ? NODE_VARPARAM : NODE_PARAM,
                 .token = name,
                 .data = {
                     .param = { type, expr },
                 },
             };
+            vararg = false;
 
             /* array_push(params, param); */
             add_scratch(parser, param);

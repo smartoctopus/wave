@@ -446,7 +446,7 @@ static Node parse_enum_variant(Parser *parser)
         .kind = kind,
         .token = name,
         .data = {
-            .binary = { .lhs = start, .rhs = end },
+            .range = { start, end },
         }
     };
 }

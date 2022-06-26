@@ -139,6 +139,7 @@ extern bool utf8_isalnum(const char *src);
 
 // Dynamic Arrays (aka std::vector in C++)
 // Implemented using stretchy buffers (Sean Barrett)
+// TODO: remove ptr from ArrayHeader
 typedef struct ArrayHeader {
     size_t length;
     size_t capacity;

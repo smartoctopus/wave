@@ -189,8 +189,37 @@ static void skip_newlines(Parser *parser)
 
 static Index parse_type(Parser *parser)
 {
-    unused(parser);
-    return invalid;
+    if (match(TOKEN_AND)) {
+        if (match(TOKEN_MUT)) {
+            return add_node(parser, NODE_REF_MUT_TYPE, index() - 2, (Data) {
+                                                                        .unary = { .expr = parse_type(parser) },
+                                                                    });
+        } else if (match(TOKEN_OWN)) {
+            return add_node(parser, NODE_REF_OWN_TYPE, index() - 2, (Data) {
+                                                                        .unary = { .expr = parse_type(parser) },
+                                                                    });
+        } else {
+            return add_node(parser, NODE_REF_TYPE, index() - 1, (Data) {
+                                                                    .unary = { .expr = parse_type(parser) },
+                                                                });
+        }
+    } else if (match(TOKEN_LBRACKET)) {
+        Index lbracket = index() - 1;
+
+        Index expr = parse_expr(parser);
+
+        expect(TOKEN_RBRACKET, "If you were trying to describe an array type, you can write one like this:\n\n"
+                               "    foo: [5]int\n\n"
+                               "Try writing it like this");
+        return add_node(parser, NODE_ARRAY_TYPE, lbracket, (Data) {
+                                                               .binary = {
+                                                                   .lhs = expr,
+                                                                   .rhs = parse_type(parser),
+                                                               },
+                                                           });
+    } else {
+        return parse_expr(parser);
+    }
 }
 
 static Index parse_stmt(Parser *parser)
@@ -642,6 +671,14 @@ static Index parse_function(Parser *parser)
 static Index parse_operand(Parser *parser)
 {
     switch (current()) {
+    case TOKEN_IDENTIFIER: {
+        advance();
+        return add_node(parser, NODE_IDENTIFIER, index() - 1, (Data) { 0 });
+    } break;
+    case TOKEN_INT: {
+        advance();
+        return add_node(parser, NODE_INT, index() - 1, (Data) { 0 });
+    }
     case TOKEN_LPAREN: {
         Index expr = parse_function(parser);
         if (expr != invalid)
@@ -658,6 +695,10 @@ static Index parse_operand(Parser *parser)
     } break;
     case TOKEN_ENUM: {
         return parse_enum(parser);
+    } break;
+    case TOKEN_RBRACKET: {
+        // NOTE: This is needed to parse array types in parse_type()
+        return invalid;
     } break;
     default: {
         todo();

@@ -29,6 +29,7 @@
 #define push_scratch(_scratch_top)                              \
     do {                                                        \
         foreach_scratch(_scratch_top, elem, {                   \
+            unused(array_pop(parser->scratch));                 \
             add_node(parser, elem.kind, elem.token, elem.data); \
         });                                                     \
         parser->scratch_top = _scratch_top;                     \

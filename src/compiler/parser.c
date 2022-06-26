@@ -792,7 +792,6 @@ static Index parse_init(Parser *parser, Index identifier)
     }
 }
 
-// TODO: add test for import foo { ... }
 static Index parse_import(Parser *parser, ImportKind import_kind)
 {
     assert(current() == TOKEN_IMPORT);

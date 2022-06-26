@@ -261,8 +261,7 @@ test("Wave compiler")
 
         it("should parse a function with one parameter")
         {
-            // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("main :: (args: ) {\n}\n");
+            stringview content = stringview_from_cstr("main :: (args: []string) {\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index func = ast.nodes.data[2].variable.expr;
@@ -271,14 +270,17 @@ test("Wave compiler")
             FuncProtoOne func_proto = get_extra(ast.nodes.extra, FuncProtoOne, proto_index);
             Index param = func_proto.param;
             expect(ast.nodes.kind[param] == NODE_PARAM);
-            expect(ast.nodes.data[param].param.type == 0);
+            Index type = ast.nodes.data[param].param.type;
+            expect(ast.nodes.kind[type] == NODE_ARRAY_TYPE);
+            expect(ast.nodes.data[type].binary.lhs == 0);
+            Index array_type = ast.nodes.data[type].binary.rhs;
+            expect(ast.nodes.kind[array_type] == NODE_IDENTIFIER);
             expect(ast.nodes.data[param].param.expr == 0);
         }
 
         it("should parse a function with multple parameters")
         {
-            // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("main :: (arg1: , arg2: , arg3: , arg4: , arg5: , arg6: ) {\n}\n");
+            stringview content = stringview_from_cstr("main :: (arg1: int, arg2: int, arg3: int, arg4: int, arg5: int, arg6: int) {\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index func = ast.nodes.data[2].variable.expr;
@@ -292,7 +294,8 @@ test("Wave compiler")
                 char const *type_str = strf("%d) type", count);
                 char const *expr_str = strf("%d) expr", count);
                 expect_str(ast.nodes.kind[i] == NODE_PARAM, kind_str);
-                expect_str(ast.nodes.data[i].param.type == 0, type_str);
+                Index type = ast.nodes.data[i].param.type;
+                expect_str(ast.nodes.kind[type] == NODE_IDENTIFIER, type_str);
                 expect_str(ast.nodes.data[i].param.expr == 0, expr_str);
                 xfree(kind_str);
                 xfree(type_str);
@@ -317,8 +320,7 @@ test("Wave compiler")
 
         it("should parse a structure with one field")
         {
-            // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("foo :: struct {bar: \n}\n");
+            stringview content = stringview_from_cstr("foo :: struct {bar: int\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -327,12 +329,13 @@ test("Wave compiler")
             Index end = ast.nodes.data[aggregate].aggregate.end;
             expect(end - start == 0);
             expect(ast.nodes.kind[start] == NODE_FIELD);
+            Index type = ast.nodes.data[start].binary.rhs;
+            expect(ast.nodes.kind[type] == NODE_IDENTIFIER);
         }
 
         it("should parse a structure with two field")
         {
-            // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("foo :: struct {bar: \n baz:\n}\n");
+            stringview content = stringview_from_cstr("foo :: struct {bar: int\n baz: [5]int\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -342,12 +345,21 @@ test("Wave compiler")
             expect(end - start == 1);
             expect(ast.nodes.kind[start] == NODE_FIELD);
             expect(ast.nodes.kind[end] == NODE_FIELD);
+            Index type = ast.nodes.data[start].binary.rhs;
+            expect(ast.nodes.kind[type] == NODE_IDENTIFIER);
+
+            type = ast.nodes.data[end].binary.rhs;
+            expect(ast.nodes.kind[type] == NODE_ARRAY_TYPE);
+            Index array_type = ast.nodes.data[type].binary.rhs;
+            expect(ast.nodes.kind[array_type] == NODE_IDENTIFIER);
+            Index array_expr = ast.nodes.data[type].binary.lhs;
+            expect(ast.nodes.kind[array_expr] == NODE_INT);
         }
 
         it("should parse a structure with multiple fields")
         {
             // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("foo :: struct {a: \n b: \nc: \n}");
+            stringview content = stringview_from_cstr("foo :: struct {a: int\n b: string\nc: char\n}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -357,7 +369,11 @@ test("Wave compiler")
             int count = 1;
             for (Index i = start; i <= end; ++i) {
                 char const *str = strf("%d field", count);
+                char const *type_str = strf("%d field's type", count);
                 expect_str(ast.nodes.kind[i] == NODE_FIELD, str);
+                Index type = ast.nodes.data[i].binary.rhs;
+                expect_str(ast.nodes.kind[type] == NODE_IDENTIFIER, type_str);
+                xfree(type_str);
                 xfree(str);
                 count++;
             }
@@ -378,9 +394,8 @@ test("Wave compiler")
 
         it("should parse an enum with one variant")
         {
-            // FIXME: when we can parse the types check them
-            // stringview content = stringview_from_cstr("foo :: enum {hello = 1}");
-            stringview content = stringview_from_cstr("foo :: enum {hello}");
+            stringview content = stringview_from_cstr("foo :: enum {hello = 1}");
+            // stringview content = stringview_from_cstr("foo :: enum {hello}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -389,14 +404,14 @@ test("Wave compiler")
             Index end = ast.nodes.data[aggregate].aggregate.end;
             expect(end - start == 0);
             expect(ast.nodes.kind[start] == NODE_VARIANT_SIMPLE);
+            Index expr = ast.nodes.data[start].binary.lhs;
+            expect(ast.nodes.kind[expr] == NODE_INT);
         }
 
         it("should parse an enum with two variants")
         {
-            // FIXME: when we can parse the types check them
-            // stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
+            stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
             // stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
-            stringview content = stringview_from_cstr("foo :: enum {hello\n world}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -404,14 +419,18 @@ test("Wave compiler")
             Index start = ast.nodes.data[aggregate].aggregate.start;
             Index end = ast.nodes.data[aggregate].aggregate.end;
             expect(end - start == 1);
-            // expect(ast.nodes.kind[start] == NODE_VARIANT_TWO);
-            expect(ast.nodes.kind[start] == NODE_VARIANT_SIMPLE);
+            expect(ast.nodes.kind[start] == NODE_VARIANT_TWO);
             expect(ast.nodes.kind[end] == NODE_VARIANT_SIMPLE);
+
+            Index field = ast.nodes.data[start].range.start;
+            Index type = ast.nodes.data[field].binary.lhs;
+            Index rhs = ast.nodes.data[field].binary.rhs;
+            expect(ast.nodes.kind[type] == NODE_IDENTIFIER);
+            expect(rhs == 0);
         }
 
         it("should parse an enum with multiple variants")
         {
-            // FIXME: when we can parse the types check them
             stringview content = stringview_from_cstr("foo :: enum {hello,\n world\nto\nall\nof\nyou}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);

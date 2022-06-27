@@ -304,7 +304,7 @@ static Index parse_struct(Parser *parser)
                 .binary = { .lhs = name, .rhs = type },
             },
         };
-        // array_push(fields, field);
+
         add_scratch(parser, field);
         count++;
 
@@ -320,16 +320,9 @@ static Index parse_struct(Parser *parser)
 
     Index start = array_length(parser->nodes.kind);
 
-    /* for (size_t i = scratch_top; i < parser->scratch_top; ++i) { */
-    /*     Node field = fields[i]; */
-    /*     add_node(parser, field.kind, field.token, field.data); */
-    /* } */
-
     push_scratch(scratch_top);
 
     Index end = array_length(parser->nodes.kind) - 1;
-
-    // array_free(fields);
 
     if (count == 0) {
         set_node(parser, result, NODE_STRUCT_TWO, token, (Data) {
@@ -595,16 +588,9 @@ static int parse_function_params(Parser *parser, Range *range)
 
     Index start = array_length(parser->nodes.kind);
 
-    /* for (size_t i = 0; i < count; ++i) { */
-    /*     Node param = params[i]; */
-    /*     add_node(parser, param.kind, param.token, param.data); */
-    /* } */
-
     push_scratch(scratch_top);
 
     Index end = array_length(parser->nodes.kind) - 1;
-
-    /* array_free(params); */
 
     *range = (Range) { start, end };
     return count;

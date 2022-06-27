@@ -3,7 +3,6 @@
 /* TODO:
  * handle newlines correctly
  * handle comments
- * improve next_decl()
  * improve error handling
  * improve error reporting
  * parse import with parenthesis
@@ -171,14 +170,6 @@ static bool __expect(Parser *parser, TokenKind kind, char const *hint)
     xfree(message);
 
     return false;
-}
-
-// TODO: improve next_decl
-static void next_decl(Parser *parser)
-{
-    while (current() != TOKEN_IDENTIFIER && (peek(1) == TOKEN_COLON_COLON || peek(1) == TOKEN_COLON || peek(1) == TOKEN_COLON_EQ)) {
-        advance();
-    }
 }
 
 static void skip_newlines(Parser *parser)
@@ -924,6 +915,40 @@ static Index parse_decl(Parser *parser)
     } break;
     }
     return invalid;
+}
+
+static void next_decl(Parser *parser)
+{
+    while (true) {
+        switch (current()) {
+        case TOKEN_EOF: {
+            return;
+        } break;
+        case TOKEN_FOREIGN: {
+            return;
+        } break;
+        case TOKEN_IMPORT: {
+            return;
+        } break;
+        case TOKEN_WHEN: {
+            return;
+        } break;
+        case TOKEN_USING: {
+            return;
+        } break;
+        case TOKEN_AT: {
+            return;
+        } break;
+        case TOKEN_IDENTIFIER: {
+            if (peek(1) == TOKEN_COLON || peek(1) == TOKEN_COLON_COLON || peek(1) == TOKEN_COLON_EQ)
+                return;
+            advance();
+        } break;
+        default: {
+            advance();
+        } break;
+        }
+    }
 }
 
 static flatten void parse_decls(Parser *parser)

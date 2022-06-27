@@ -6,7 +6,8 @@
  * improve next_decl()
  * improve error handling
  * improve error reporting
- * fix all unused(mtach(TOKEN_R*)) -> make them expect()
+ * parse import with parenthesis
+ * parse_init() should handle a comma separated list of identifiers on lhs
  */
 
 // Token macros

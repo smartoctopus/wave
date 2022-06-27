@@ -252,7 +252,8 @@ static Index parse_block(Parser *parser)
         }
     }
 
-    unused(match(TOKEN_RBRACE));
+    // NOTE: should we add an hint
+    expect(TOKEN_RBRACE, NULL);
 
     Range range = { start, end };
 
@@ -273,7 +274,7 @@ static Index parse_struct(Parser *parser)
     advance();
 
     bool found
-        = expect(TOKEN_LBRACE, "I was expecting an opening brace after the struct keyword. Try adding it!\n\n" STRUCT_EXAMPLE);
+        = expect(TOKEN_LBRACE, "I was expecting an opening brace after the struct keyword. Try adding it!" STRUCT_EXAMPLE);
     if (!found)
         return invalid;
 
@@ -314,7 +315,7 @@ static Index parse_struct(Parser *parser)
         skip_newlines(parser);
     }
 
-    unused(match(TOKEN_RBRACE));
+    expect(TOKEN_RBRACE, "I was expecting a closing brace at the end of a struct declaration. Try adding it!" STRUCT_EXAMPLE);
 
     Index start = array_length(parser->nodes.kind);
 
@@ -410,7 +411,10 @@ static Node parse_enum_variant(Parser *parser)
             skip_newlines(parser);
         }
 
-        unused(match(TOKEN_RPAREN));
+        expect(TOKEN_RPAREN, "I was expecting a closing parenthesis at the end of this complex variant, like:\n\n"
+                             "    foo :: enum {\n"
+                             "        bar(int, string)\n"
+                             "    }\n");
     } else if (match(TOKEN_EQ)) {
         expr = parse_expr(parser);
     }
@@ -487,8 +491,7 @@ static Index parse_enum(Parser *parser)
         skip_newlines(parser);
     }
 
-    // We only eat the } and not the EOF
-    unused(match(TOKEN_RBRACE));
+    expect(TOKEN_RBRACE, "I was expecting a closing brace at the end of an enum declaration. Try adding it!" ENUM_EXAMPLE);
 
     Index start = array_length(parser->nodes.kind);
 
@@ -512,6 +515,8 @@ static Index parse_enum(Parser *parser)
 
     return result;
 }
+
+#undef ENUM_EXAMPLE
 
 static int parse_function_params(Parser *parser, Range *range)
 {
@@ -908,7 +913,7 @@ static Index parse_decl(Parser *parser)
 
         Index end = array_length(parser->nodes.kind) - 1;
 
-        unused(match(TOKEN_RBRACE));
+        expect(TOKEN_RBRACE, "I was expecting a closing brace at the end of a foreign block. Try adding it!");
 
         set_node(parser, result, NODE_FOREIGN, foreign, (Data) {
                                                             .block = { start, end },

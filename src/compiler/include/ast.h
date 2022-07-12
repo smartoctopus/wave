@@ -349,6 +349,6 @@ typedef struct Ast {
 void free_ast(Ast ast);
 
 /// Add some data to NodeList.extra
-uint32_t __add_extra(char **, void *data, size_t len);
+uint32_t __add_extra(char **buf, void *data, size_t len);
 
 #endif // AST_H_

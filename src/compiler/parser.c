@@ -220,6 +220,8 @@ static Index parse_stmt(Parser *parser)
     return invalid;
 }
 
+// TODO: Fix what gets pushed
+// We probably need to use scratch
 static Index parse_block(Parser *parser)
 {
     if (current() != TOKEN_LBRACE) {
@@ -719,6 +721,7 @@ static Range parse_name_list(Parser *parser)
 //   - foo := 5
 //   - foo : int : 5
 //   - foo : int = 5
+// TODO: parse foo, bar := baz()
 static Index parse_init(Parser *parser, Index identifier)
 {
     char const *hint = "I can only understand these types of initialization:\n\n"

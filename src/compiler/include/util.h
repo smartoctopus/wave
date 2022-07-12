@@ -204,6 +204,7 @@ extern bool stringview_starts_with(stringview a, stringview b);
 extern bool stringview_starts_with_cstr(stringview a, const char *b);
 extern bool stringview_ends_with(stringview a, stringview b);
 extern bool stringview_ends_with_cstr(stringview a, const char *b);
+extern int stringview_cmp(stringview a, stringview b);
 
 #ifndef stringview_from_cstr
 #    define stringview_from_cstr(cstr) stringview_make((cstr), strlen((cstr)))
@@ -862,6 +863,17 @@ bool stringview_ends_with_cstr(stringview a, const char *b)
         j++;
     }
     return true;
+}
+
+int stringview_cmp(stringview a, stringview b)
+{
+    if (a.length > b.length) {
+        return 1;
+    } else if (a.length < b.length) {
+        return -1;
+    } else {
+        strncmp(a.str, b.str, a.length);
+    }
 }
 
 #ifdef TESTING

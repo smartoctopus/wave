@@ -89,7 +89,8 @@
     X(TOKEN_COLON_COLON, "::")                      \
     X(TOKEN_SEMICOLON, ";")                         \
     X(TOKEN_NEWLINE, "NEWLINE")                     \
-    KEYWORDS(X)
+    KEYWORDS(X)                                     \
+    X(TOKEN_MAX, "")
 
 #define KEYWORDS(X)                     \
     X(TOKEN_FIRST_KEYWORD, "")          \

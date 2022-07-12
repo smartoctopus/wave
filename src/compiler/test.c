@@ -556,6 +556,16 @@ test("Wave compiler")
             Index index = ast.nodes.data[import].binary.rhs;
             expect(ast.nodes.kind[index] == NODE_ALL_SYMBOLS);
         }
+
+        it("should parse some math expressions")
+        {
+            stringview content = stringview_from_cstr("1 + 2 * 3");
+            FileId id = add_file("test.wave", content);
+            ast = parse(id, content);
+            stringview str = ast_to_str(ast);
+            stringview expected = stringview_from_cstr("(+ 1 (* 2 3))");
+            expect(stringview_cmp(str, expected));
+        }
     }
 
     describe("Diagnostics")

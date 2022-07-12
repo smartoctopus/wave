@@ -62,6 +62,26 @@ typedef struct Parser {
     size_t scratch_top;
 } Parser;
 
+// TODO: as and or
+typedef enum Precedence {
+    PREC_NONE,
+    PREC_OR,         // ||
+    PREC_AND,        // &&
+    PREC_EQUALITY,   // == !=
+    PREC_COMPARISON, // < > <= >=
+    PREC_TERM,       // + -
+    PREC_FACTOR,     // * /
+    PREC_UNARY,      // ! -
+    PREC_CALL,       // . ()
+    PREC_PRIMARY
+} Precedence;
+
+typedef struct Op {
+    Precedence prec;
+    NodeKind kind;
+    Index token;
+} Op;
+
 typedef enum ImportKind {
     IMPORT_NORMAL,
     IMPORT_FOREIGN,
@@ -653,7 +673,7 @@ static Index parse_function(Parser *parser)
     return result;
 }
 
-static Index parse_operand(Parser *parser)
+static Index parse_primary(Parser *parser)
 {
     switch (current()) {
     case TOKEN_IDENTIFIER: {
@@ -692,10 +712,53 @@ static Index parse_operand(Parser *parser)
     return invalid;
 }
 
+static Index parse_lhs(Parser *parser)
+{
+    return parse_primary(parser);
+}
+
+static Op current_op(Parser *parser)
+{
+    static const Op table[TOKEN_MAX] = {
+        [TOKEN_PLUS] = { .prec = PREC_TERM, .kind = NODE_ADD_EXPR },
+        [TOKEN_MINUS] = { .prec = PREC_TERM, .kind = NODE_SUB_EXPR },
+    };
+    Op op = table[current()];
+    op.token = index();
+    return op;
+}
+
+static Index parse_expr_prec(Parser *parser, Precedence prec)
+{
+    Index lhs = parse_lhs(parser);
+
+    if (lhs == invalid)
+        return invalid;
+
+    while (true) {
+        Op op = current_op(parser);
+        if (op.prec == PREC_NONE)
+            return lhs;
+
+        advance();
+
+        if (op.prec < prec)
+            break;
+
+        Index rhs = parse_expr_prec(parser, op.prec + 1); // TODO: Check if +1 is needed
+
+        lhs = add_node(parser, op.kind, op.token, (Data) {
+                                                      .binary = { lhs, rhs },
+                                                  });
+    }
+
+    return lhs;
+}
+
 static Index parse_expr(Parser *parser)
 {
-    Index lhs = parse_operand(parser);
-    return lhs;
+    // return parse_lhs(parser);
+    return parse_expr_prec(parser, PREC_OR);
 }
 
 static Range parse_name_list(Parser *parser)

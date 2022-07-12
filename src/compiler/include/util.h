@@ -872,7 +872,7 @@ int stringview_cmp(stringview a, stringview b)
     } else if (a.length < b.length) {
         return -1;
     } else {
-        strncmp(a.str, b.str, a.length);
+        return strncmp(a.str, b.str, a.length);
     }
 }
 

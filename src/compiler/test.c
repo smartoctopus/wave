@@ -109,9 +109,9 @@ test("Wave compiler")
                 TOKEN_COLON_EQ,
             };
             for (size_t i = 0; i < lengthof(kinds); ++i) {
-                const char *str1 = token_to_string(lexed_src.kind[i]);
-                const char *str2 = token_to_string(kinds[i]);
-                const char *str = strf("%d) %s = %s", i, str1, str2);
+                char const *str1 = token_to_string(lexed_src.kind[i]);
+                char const *str2 = token_to_string(kinds[i]);
+                char const *str = strf("%d) %s = %s", i, str1, str2);
                 expect_str(lexed_src.kind[i] == kinds[i], str);
                 xfree(str);
             }
@@ -559,11 +559,11 @@ test("Wave compiler")
 
         it("should parse some math expressions")
         {
-            stringview content = stringview_from_cstr("1 + 2 * 3");
+            stringview content = stringview_from_cstr("hello :: 2 * 1 - 2 * 3");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
-            stringview str = ast_to_str(ast);
-            stringview expected = stringview_from_cstr("(+ 1 (* 2 3))");
+            stringview str = print_ast(ast);
+            stringview expected = stringview_from_cstr("(def hello (- (* 2 1) (* 2 3)))");
             expect(stringview_cmp(str, expected));
         }
     }

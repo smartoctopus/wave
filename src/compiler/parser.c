@@ -406,7 +406,7 @@ static Index parse_struct(Parser *parser)
 #undef STRUCT_EXAMPLE
 
 #define ENUM_EXAMPLE "\n\n    foo :: enum {\n" \
-                     "        bar\n"           \
+                     "        bar,\n"          \
                      "        baz\n"           \
                      "    }\n"
 
@@ -424,9 +424,9 @@ static Node parse_enum_variant(Parser *parser)
 
     Index expr = invalid;
 
-    if (match(TOKEN_LPAREN)) {
+    if (match(TOKEN_LBRACE)) {
         count = 0;
-        while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RPAREN)) {
+        while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RBRACE)) {
             Index lhs = parse_type(parser);
 
             Index rhs = invalid;
@@ -435,12 +435,13 @@ static Node parse_enum_variant(Parser *parser)
                     char const *label = strf("found %s", token_to_string(parser->token_kind[lhs]));
                     error_at(parser, parser->nodes.token[lhs], "expected an identifier", label, "While I was trying to understand this enum variant I was expecting the left-hand side of the colon to be an identifier, while in the right-hand side of the colon I was expecting a type. For example:\n\n"
                                                                                                 "    foo :: enum {\n"
-                                                                                                "        bar(ident: string)\n"
+                                                                                                "        bar { ident: string }\n"
                                                                                                 "    }\n\n"
                                                                                                 "Try making your variant look like this");
                     xfree(label);
+                } else {
+                    rhs = parse_type(parser);
                 }
-                rhs = parse_type(parser);
             }
 
             Node field = {
@@ -452,24 +453,23 @@ static Node parse_enum_variant(Parser *parser)
             add_scratch(parser, field);
             count++;
 
-            if (is_token(TOKEN_RPAREN))
+            skip_newlines(parser);
+            if (is_token(TOKEN_RBRACE))
                 break;
 
-            // NOTE: is this needed?
-            skip_newlines(parser);
             expect(TOKEN_COMMA, "I can only understand these types of enum variants:\n\n"
                                 "    foo :: enum {\n"
                                 "        first\n"
                                 "        second = 2\n"
-                                "        third(int)\n"
-                                "        fourth(a: int, b: string)\n"
+                                "        third { int }\n"
+                                "        fourth { a: int, b: string }\n"
                                 "    }\n");
             skip_newlines(parser);
         }
 
-        expect(TOKEN_RPAREN, "I was expecting a closing parenthesis at the end of this complex variant, like:\n\n"
+        expect(TOKEN_RBRACE, "I was expecting a closing brace at the end of this complex variant, like:\n\n"
                              "    foo :: enum {\n"
-                             "        bar(int, string)\n"
+                             "        bar { int, string }\n"
                              "    }\n");
     } else if (match(TOKEN_EQ)) {
         expr = parse_expr(parser);
@@ -484,15 +484,15 @@ static Node parse_enum_variant(Parser *parser)
     }
 
     if (count == 0) {
-        Index rparen = index() - 1;
-        error_span(parser, span(parser, name, rparen), "invalid enum variant", "there aren't any fields between the parenthesis", "An enum variant is invalid if it is written like:\n\n"
-                                                                                                                                  "    foo :: enum {\n"
-                                                                                                                                  "        bar()\n"
-                                                                                                                                  "    }\n\n"
-                                                                                                                                  "Instead of opening and closing the parenthesis, you can directly write an enum variant like:\n\n"
-                                                                                                                                  "    foo :: enum {\n"
-                                                                                                                                  "        bar\n"
-                                                                                                                                  "    }\n\n");
+        Index rbrace = index() - 1;
+        error_span(parser, span(parser, name, rbrace), "invalid enum variant", "there aren't any fields between the braces", "An enum variant is invalid if it is written like:\n\n"
+                                                                                                                             "    foo :: enum {\n"
+                                                                                                                             "        bar { }\n"
+                                                                                                                             "    }\n\n"
+                                                                                                                             "Instead of opening and closing the braces, you can directly write an enum variant like:\n\n"
+                                                                                                                             "    foo :: enum {\n"
+                                                                                                                             "        bar\n"
+                                                                                                                             "    }\n\n");
     }
 
     Index start = array_length(parser->nodes.kind);
@@ -537,13 +537,12 @@ static Index parse_enum(Parser *parser)
         add_scratch(parser, variant);
         count++;
 
-        unused(match(TOKEN_COMMA));
-
+        skip_newlines(parser);
         if (is_token(TOKEN_RBRACE) || is_token(TOKEN_EOF))
             break;
 
-        expect(TOKEN_NEWLINE, "Every variant of an enum must end with a newline. For example:" ENUM_EXAMPLE "\n"
-                              "Try adding a newline");
+        expect(TOKEN_COMMA, "Every variant of an enum must end with ','. For example:" ENUM_EXAMPLE "\n"
+                            "Try adding a comma");
         skip_newlines(parser);
     }
 

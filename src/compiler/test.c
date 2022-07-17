@@ -411,8 +411,7 @@ test("Wave compiler")
 
         it("should parse an enum with two variants")
         {
-            stringview content = stringview_from_cstr("foo :: enum {hello(int)\n world}");
-            // stringview content = stringview_from_cstr("foo :: enum {hello()\n world}");
+            stringview content = stringview_from_cstr("foo :: enum {hello { int },\n world}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -432,7 +431,7 @@ test("Wave compiler")
 
         it("should parse an enum with multiple variants")
         {
-            stringview content = stringview_from_cstr("foo :: enum {hello,\n world\nto\nall\nof\nyou}");
+            stringview content = stringview_from_cstr("foo :: enum {hello,\n world,\nto,\nall,\nof,\nyou}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;

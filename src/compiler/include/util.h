@@ -97,8 +97,8 @@
 #endif
 
 // xmalloc/xrealloc
-extern void *_xmalloc(size_t size, const char *file, uint64_t line);
-extern void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line);
+extern void *_xmalloc(size_t size, char const *file, uint64_t line);
+extern void *_xrealloc(void *_ptr, size_t size, char const *file, uint64_t line);
 
 #define xmalloc(n) _xmalloc((n), __FILE__, __LINE__)
 #define xrealloc(p, n) _xrealloc((p), (n), __FILE__, __LINE__)
@@ -119,7 +119,7 @@ alwaysinline int _log2(int n)
 
 // strf
 PRINTF_ARGS(1)
-extern char *strf(const char *fmt, ...);
+extern char *strf(char const *fmt, ...);
 
 // UTF-8
 typedef uint32_t Rune;
@@ -133,9 +133,9 @@ typedef uint32_t Rune;
             : ((c) == '\0' || (c) == '\x1A') ? 0 \
                                              : 1)
 
-extern Rune utf8_decode(const char *src);
-extern bool utf8_isalpha(const char *src);
-extern bool utf8_isalnum(const char *src);
+extern Rune utf8_decode(char const *src);
+extern bool utf8_isalpha(char const *src);
+extern bool utf8_isalnum(char const *src);
 
 // Dynamic Arrays (aka std::vector in C++)
 // Implemented using stretchy buffers (Sean Barrett)
@@ -149,7 +149,7 @@ typedef struct ArrayHeader {
 extern void *array_growf(void *a, size_t elem_size, size_t addlen,
     size_t new_cap);
 PRINTF_ARGS(2)
-extern void array_printf(char **array, const char *fmt, ...);
+extern void array_printf(char **array, char const *fmt, ...);
 
 #define array(t) t *
 #define array_free(a) ((a) ? (free(array_header((a))), (a) = NULL) : 0)
@@ -188,11 +188,11 @@ extern void _heapsort(void *start, size_t length, size_t elem_size,
 
 /* Stringview */
 typedef struct stringview {
-    const char *str;
+    char const *str;
     size_t length;
 } stringview;
 
-extern stringview stringview_make(const char *ptr, size_t length);
+extern stringview stringview_make(char const *ptr, size_t length);
 extern void stringview_trim_space_left(stringview *sv);
 extern void stringview_trim_space_right(stringview *sv);
 extern void stringview_trim_space(stringview *sv);
@@ -201,9 +201,9 @@ extern void stringview_chop_right(stringview *sv, size_t size);
 extern void stringview_chop_while(stringview *sv, bool (*predicate)(char));
 extern stringview stringview_take_while(stringview sv, bool (*predicate)(char));
 extern bool stringview_starts_with(stringview a, stringview b);
-extern bool stringview_starts_with_cstr(stringview a, const char *b);
+extern bool stringview_starts_with_cstr(stringview a, char const *b);
 extern bool stringview_ends_with(stringview a, stringview b);
-extern bool stringview_ends_with_cstr(stringview a, const char *b);
+extern bool stringview_ends_with_cstr(stringview a, char const *b);
 extern int stringview_cmp(stringview a, stringview b);
 
 #ifndef stringview_from_cstr
@@ -219,7 +219,7 @@ extern int stringview_cmp(stringview a, stringview b);
 #ifdef UTIL_IMPL
 #undef UTIL_IMPL
 // xmalloc/xrealloc
-void *_xmalloc(size_t size, const char *file, uint64_t line)
+void *_xmalloc(size_t size, char const *file, uint64_t line)
 {
     void *ptr = malloc(size);
     if (!ptr) {
@@ -230,7 +230,7 @@ void *_xmalloc(size_t size, const char *file, uint64_t line)
     return ptr;
 }
 
-void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line)
+void *_xrealloc(void *_ptr, size_t size, char const *file, uint64_t line)
 {
     void *ptr = realloc(_ptr, size);
     if (!ptr) {
@@ -242,7 +242,7 @@ void *_xrealloc(void *_ptr, size_t size, const char *file, uint64_t line)
 }
 
 // strf
-char *strf(const char *fmt, ...)
+char *strf(char const *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -286,7 +286,7 @@ char *strf(const char *fmt, ...)
  * IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-Rune utf8_decode(const char *src)
+Rune utf8_decode(char const *src)
 {
     int len;
     Rune rune;
@@ -313,8 +313,8 @@ Rune utf8_decode(const char *src)
     return rune;
 }
 
-bool utf8_isalpha(const char *src) { return is_utf8(*src) || isalpha(*src); }
-bool utf8_isalnum(const char *src) { return is_utf8(*src) || isalnum(*src); }
+bool utf8_isalpha(char const *src) { return is_utf8(*src) || isalpha(*src); }
+bool utf8_isalnum(char const *src) { return is_utf8(*src) || isalnum(*src); }
 
 // Memory Functions
 void memswap(void *a, void *b, size_t size)
@@ -362,7 +362,7 @@ void *array_growf(void *a, size_t elem_size, size_t add_len, size_t new_cap)
     return (void *)((char *)b + offsetof(ArrayHeader, ptr));
 }
 
-void array_printf(char **a, const char *fmt, ...)
+void array_printf(char **a, char const *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -729,7 +729,7 @@ void _sort(void *a, size_t length, size_t elem_size, comp_t comp)
 }
 
 /* Stringview */
-stringview stringview_make(const char *ptr, size_t length)
+stringview stringview_make(char const *ptr, size_t length)
 {
     stringview result = { ptr, length };
     return result;
@@ -812,7 +812,7 @@ bool stringview_starts_with(stringview a, stringview b)
     return true;
 }
 
-bool stringview_starts_with_cstr(stringview a, const char *b)
+bool stringview_starts_with_cstr(stringview a, char const *b)
 {
     size_t i = 0;
     size_t length = strlen(b);
@@ -846,7 +846,7 @@ bool stringview_ends_with(stringview a, stringview b)
     return true;
 }
 
-bool stringview_ends_with_cstr(stringview a, const char *b)
+bool stringview_ends_with_cstr(stringview a, char const *b)
 {
     size_t i = 0;
     size_t j = 0;

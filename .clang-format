@@ -12,4 +12,4 @@ BraceWrapping:
     AfterFunction: true
 NamespaceIndentation: None
 PointerAlignment: Right
-# QualifierAlignment: Right
+QualifierAlignment: Right

@@ -31,6 +31,7 @@
 #define advance() (parser->token_index++)
 #define index() (parser->token_index)
 
+#define is_token(_tok) (current() == _tok)
 #define match(_kind) (__match(parser, (_kind)))
 #define expect(_kind, _hint) (__expect(parser, (_kind), (_hint)))
 
@@ -152,7 +153,7 @@ static inline void add_scratch(Parser *parser, Node scratch_node)
 
 static inline bool __match(Parser *parser, TokenKind kind)
 {
-    if (current() == kind) {
+    if (is_token(kind)) {
         advance();
         return true;
     }
@@ -198,7 +199,7 @@ static Span span(Parser *parser, Index first, Index last)
 
 static bool __expect(Parser *parser, TokenKind kind, char const *hint)
 {
-    if (current() == kind) {
+    if (is_token(kind)) {
         advance();
         return true;
     }
@@ -213,7 +214,7 @@ static bool __expect(Parser *parser, TokenKind kind, char const *hint)
 
 static void skip_newlines(Parser *parser)
 {
-    while (current() == TOKEN_NEWLINE) {
+    while (is_token(TOKEN_NEWLINE)) {
         advance();
     }
 }
@@ -261,7 +262,7 @@ static Node parse_stmt(Parser *parser)
 
 static Index parse_block(Parser *parser)
 {
-    if (current() != TOKEN_LBRACE) {
+    if (!is_token(TOKEN_LBRACE)) {
         return invalid;
     }
 
@@ -280,7 +281,7 @@ static Index parse_block(Parser *parser)
     // If we skipped the newlines the loop won't be executed, making the result of parse_block() => (Node) {.data = {.block = { 0 } } }
     skip_newlines(parser);
 
-    while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
+    while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RBRACE)) {
         skip_newlines(parser);
         Node stmt = parse_stmt(parser);
         add_scratch(parser, stmt);
@@ -318,7 +319,7 @@ static Index parse_block(Parser *parser)
 static Index parse_struct(Parser *parser)
 {
     Index token = index();
-    assert(current() == TOKEN_STRUCT);
+    assert(is_token(TOKEN_STRUCT));
     advance();
 
     bool found
@@ -332,7 +333,7 @@ static Index parse_struct(Parser *parser)
     size_t count = 0;
 
     skip_newlines(parser);
-    while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
+    while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RBRACE)) {
         // Field name
         Index name_token = index();
         expect(TOKEN_IDENTIFIER, "You can write a struct field like:" STRUCT_EXAMPLE "\n"
@@ -355,7 +356,7 @@ static Index parse_struct(Parser *parser)
         add_scratch(parser, field);
         count++;
 
-        if (current() == TOKEN_RBRACE || current() == TOKEN_EOF)
+        if (is_token(TOKEN_RBRACE) || is_token(TOKEN_EOF))
             break;
 
         expect(TOKEN_NEWLINE, "Every field of a struct must end with a newline. For example:" STRUCT_EXAMPLE "\n"
@@ -411,7 +412,7 @@ static Node parse_enum_variant(Parser *parser)
 
     if (match(TOKEN_LPAREN)) {
         count = 0;
-        while (current() != TOKEN_EOF && current() != TOKEN_RPAREN) {
+        while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RPAREN)) {
             Index lhs = parse_type(parser);
 
             Index rhs = invalid;
@@ -437,7 +438,7 @@ static Node parse_enum_variant(Parser *parser)
             add_scratch(parser, field);
             count++;
 
-            if (current() == TOKEN_RPAREN)
+            if (is_token(TOKEN_RPAREN))
                 break;
 
             // NOTE: is this needed?
@@ -498,7 +499,7 @@ static Node parse_enum_variant(Parser *parser)
 
 static Index parse_enum(Parser *parser)
 {
-    assert(current() == TOKEN_ENUM);
+    assert(is_token(TOKEN_ENUM));
     advance();
 
     Index token = invalid;
@@ -516,7 +517,7 @@ static Index parse_enum(Parser *parser)
 
     int count = 0;
 
-    while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
+    while (!is_token(TOKEN_EOF) && !is_token(TOKEN_RBRACE)) {
         Node variant = parse_enum_variant(parser);
 
         add_scratch(parser, variant);
@@ -524,7 +525,7 @@ static Index parse_enum(Parser *parser)
 
         unused(match(TOKEN_COMMA));
 
-        if (current() == TOKEN_RBRACE || current() == TOKEN_EOF)
+        if (is_token(TOKEN_RBRACE) || is_token(TOKEN_EOF))
             break;
 
         expect(TOKEN_NEWLINE, "Every variant of an enum must end with a newline. For example:" ENUM_EXAMPLE "\n"
@@ -561,7 +562,7 @@ static Index parse_enum(Parser *parser)
 
 static int parse_function_params(Parser *parser, Range *range)
 {
-    assert(current() == TOKEN_LPAREN);
+    assert(is_token(TOKEN_LPAREN));
     advance();
 
     if (match(TOKEN_RPAREN)) {
@@ -574,7 +575,7 @@ static int parse_function_params(Parser *parser, Range *range)
 
     bool vararg = false;
 
-    while (current() == TOKEN_IDENTIFIER) {
+    while (is_token(TOKEN_IDENTIFIER)) {
         Index name_token = index();
         advance();
         Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
@@ -603,7 +604,7 @@ static int parse_function_params(Parser *parser, Range *range)
             add_scratch(parser, param);
             count++;
         } else {
-            if (current() != TOKEN_COMMA)
+            if (!is_token(TOKEN_COMMA))
                 return -1;
 
             char const *start = parser->str + parser->token_start[parser->token_index - 1];
@@ -622,7 +623,7 @@ static int parse_function_params(Parser *parser, Range *range)
         }
 
         // NOTE: should we actually exit right here when we encounter TOKEN_EOF
-        if (current() == TOKEN_RPAREN || current() == TOKEN_EOF)
+        if (is_token(TOKEN_RPAREN) || is_token(TOKEN_EOF))
             break;
 
         expect(TOKEN_COMMA, "I was expecting a comma after the parameter, like:\n\n"
@@ -841,9 +842,9 @@ static Range parse_name_list(Parser *parser)
 {
     Index start = array_length(parser->nodes.kind);
 
-    while (current() != TOKEN_EOF && match(TOKEN_IDENTIFIER)) {
+    while (!is_token(TOKEN_EOF) && match(TOKEN_IDENTIFIER)) {
         add_node(parser, NODE_IDENTIFIER, index() - 1, (Data) { 0 });
-        if (current() != TOKEN_COMMA)
+        if (!is_token(TOKEN_COMMA))
             break;
         advance();
     }
@@ -919,7 +920,7 @@ static Index parse_init(Parser *parser, Index identifier)
 
 static Index parse_import(Parser *parser, ImportKind import_kind)
 {
-    assert(current() == TOKEN_IMPORT);
+    assert(is_token(TOKEN_IMPORT));
     advance();
 
     Index result = reserve_node(parser);
@@ -1005,7 +1006,7 @@ static Index parse_decl(Parser *parser)
         Index foreign = index();
         advance();
 
-        if (current() == TOKEN_IMPORT)
+        if (is_token(TOKEN_IMPORT))
             return parse_import(parser, IMPORT_FOREIGN);
 
         bool found = expect(TOKEN_LBRACE, "I expected a foreign declaration, like:\n\n"
@@ -1096,7 +1097,7 @@ static void next_decl(Parser *parser)
 static flatten void parse_decls(Parser *parser)
 {
     skip_newlines(parser);
-    while (current() != TOKEN_EOF) {
+    while (!is_token(TOKEN_EOF)) {
         Index decl = parse_decl(parser);
         if (decl == invalid) {
             next_decl(parser);

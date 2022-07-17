@@ -107,7 +107,7 @@ enum { invalid = 0 };
 
 static Index parse_type(Parser *parser);
 static Index parse_expr(Parser *parser);
-static Index parse_stmt(Parser *parser);
+static Node parse_stmt(Parser *parser);
 static void parse_decls(Parser *parser);
 
 static Index add_node(Parser *parser, NodeKind kind, Index token, Data data)
@@ -250,14 +250,12 @@ static Index parse_type(Parser *parser)
     }
 }
 
-static Index parse_stmt(Parser *parser)
+static Node parse_stmt(Parser *parser)
 {
     unused(parser);
-    return invalid;
+    return (Node) { 0 };
 }
 
-// TODO: Fix what gets pushed
-// We probably need to use scratch
 static Index parse_block(Parser *parser)
 {
     if (current() != TOKEN_LBRACE) {
@@ -269,21 +267,38 @@ static Index parse_block(Parser *parser)
 
     Index result = reserve_node(parser);
 
-    Index start = 0;
-    Index end = 0;
+    Index scratch_top = parser->scratch_top;
+    int count = 0;
+
+    // If we have some newlines skip them, so we do not enter the loop in the following case
+    // func :: () {
+    //               <- Newline but no statement
+    // }
+    // If we skipped the newlines the loop won't be executed, making the result of parse_block() => (Node) {.data = {.block = { 0 } } }
+    skip_newlines(parser);
 
     while (current() != TOKEN_EOF && current() != TOKEN_RBRACE) {
         skip_newlines(parser);
-        Index stmt = parse_stmt(parser);
-        if (unlikely(start == 0)) {
-            start = stmt;
-        } else {
-            end = stmt;
-        }
+        Node stmt = parse_stmt(parser);
+        add_scratch(parser, stmt);
+        count++;
     }
 
     // NOTE: should we add an hint
     expect(TOKEN_RBRACE, NULL);
+
+    if (count == 0) {
+        set_node(parser, result, NODE_BLOCK, token, (Data) {
+                                                        .block = { 0 },
+                                                    });
+        return result;
+    }
+
+    Index start = array_length(parser->nodes.kind);
+
+    push_scratch(scratch_top);
+
+    Index end = array_length(parser->nodes.kind) - 1;
 
     Range range = { start, end };
 

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+mkdir -p bin
+cd bin
+if [ "$1" == "release" ]
+   then
+      cmake -DCMAKE_BUILD_TYPE=Release .. && make
+else
+cmake -DCMAKE_BUILD_TYPE=Debug .. && make
+fi
+cp wave ..
+cd ..
+./wave

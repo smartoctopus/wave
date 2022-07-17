@@ -66,7 +66,8 @@ typedef enum NodeKind {
     // token { start..end }
     NODE_STRUCT,
 
-    // lhs : rhs
+    // token : lhs (= rhs)?
+    // token := rhs
     NODE_FIELD,
 
     // enum token { lhs, rhs }

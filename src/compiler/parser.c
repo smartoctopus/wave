@@ -311,9 +311,10 @@ static Index parse_block(Parser *parser)
     return result;
 }
 
-#define STRUCT_EXAMPLE "\n\n    foo :: struct {\n" \
-                       "        bar: int\n"        \
-                       "        baz: float\n"      \
+#define STRUCT_EXAMPLE "\n\n    foo :: struct {\n"    \
+                       "        bar: int,\n"          \
+                       "        baz: float = 3.14,\n" \
+                       "        fizzbuzz := 0\n"      \
                        "    }\n"
 
 static Index parse_struct(Parser *parser)
@@ -341,26 +342,39 @@ static Index parse_struct(Parser *parser)
         Index name = add_node(parser, NODE_IDENTIFIER, name_token, (Data) { 0 });
 
         // Field type
-        expect(TOKEN_COLON, "Every field of a struct should have a type, like:" STRUCT_EXAMPLE "\n"
-                            "Try adding the type to the field");
-        Index type = parse_type(parser);
+        Index type = invalid;
+        Index expr = invalid;
+        if (match(TOKEN_COLON)) {
+            type = parse_type(parser);
+            if (match(TOKEN_EQ)) {
+                expr = parse_expr(parser);
+            }
+        } else if (match(TOKEN_COLON_EQ)) {
+            expr = parse_expr(parser);
+        } else {
+            char const *label = strf("found '%s'", token_to_string(current()));
+            error_at_current(parser, "expected ':' or ':='", label, "Every field of a struct should have a type, with an optional initial expression, or only an initial expression. For example:" STRUCT_EXAMPLE "\n"
+                                                                    "Try adding either a type or an expression");
+            xfree(label);
+        }
 
         Node field = {
             .kind = NODE_FIELD,
             .token = name,
             .data = {
-                .binary = { .lhs = name, .rhs = type },
+                .binary = { .lhs = type, .rhs = expr },
             },
         };
 
         add_scratch(parser, field);
         count++;
 
+        skip_newlines(parser);
         if (is_token(TOKEN_RBRACE) || is_token(TOKEN_EOF))
             break;
 
-        expect(TOKEN_NEWLINE, "Every field of a struct must end with a newline. For example:" STRUCT_EXAMPLE "\n"
-                              "Try adding a newline");
+        expect(TOKEN_COMMA, "Every field of a struct must end with ','. For example:" STRUCT_EXAMPLE "\n"
+                            "Try adding a comma");
         skip_newlines(parser);
     }
 

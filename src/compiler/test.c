@@ -329,13 +329,13 @@ test("Wave compiler")
             Index end = ast.nodes.data[aggregate].aggregate.end;
             expect(end - start == 0);
             expect(ast.nodes.kind[start] == NODE_FIELD);
-            Index type = ast.nodes.data[start].binary.rhs;
+            Index type = ast.nodes.data[start].binary.lhs;
             expect(ast.nodes.kind[type] == NODE_IDENTIFIER);
         }
 
         it("should parse a structure with two field")
         {
-            stringview content = stringview_from_cstr("foo :: struct {bar: int\n baz: [5]int\n}\n");
+            stringview content = stringview_from_cstr("foo :: struct {bar: int,\n baz: [5]int\n}\n");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -345,10 +345,10 @@ test("Wave compiler")
             expect(end - start == 1);
             expect(ast.nodes.kind[start] == NODE_FIELD);
             expect(ast.nodes.kind[end] == NODE_FIELD);
-            Index type = ast.nodes.data[start].binary.rhs;
+            Index type = ast.nodes.data[start].binary.lhs;
             expect(ast.nodes.kind[type] == NODE_IDENTIFIER);
 
-            type = ast.nodes.data[end].binary.rhs;
+            type = ast.nodes.data[end].binary.lhs;
             expect(ast.nodes.kind[type] == NODE_ARRAY_TYPE);
             Index array_type = ast.nodes.data[type].binary.rhs;
             expect(ast.nodes.kind[array_type] == NODE_IDENTIFIER);
@@ -359,7 +359,7 @@ test("Wave compiler")
         it("should parse a structure with multiple fields")
         {
             // FIXME: when we can parse the types check them
-            stringview content = stringview_from_cstr("foo :: struct {a: int\n b: string\nc: char\n}");
+            stringview content = stringview_from_cstr("foo :: struct {a: int,\n b: string,\nc: char\n}");
             FileId id = add_file("test.wave", content);
             ast = parse(id, content);
             Index aggregate = ast.nodes.data[2].variable.expr;
@@ -371,7 +371,7 @@ test("Wave compiler")
                 char const *str = strf("%d field", count);
                 char const *type_str = strf("%d field's type", count);
                 expect_str(ast.nodes.kind[i] == NODE_FIELD, str);
-                Index type = ast.nodes.data[i].binary.rhs;
+                Index type = ast.nodes.data[i].binary.lhs;
                 expect_str(ast.nodes.kind[type] == NODE_IDENTIFIER, type_str);
                 xfree(type_str);
                 xfree(str);

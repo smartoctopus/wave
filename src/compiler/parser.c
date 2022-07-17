@@ -78,20 +78,23 @@ typedef struct Parser {
     size_t scratch_top;
 } Parser;
 
-// TODO: as and or
+/// This enum represents the precedence of an operator during expression parsing
 typedef enum Precedence {
     PREC_NONE,
-    PREC_OR,         // ||
-    PREC_AND,        // &&
-    PREC_EQUALITY,   // == !=
-    PREC_COMPARISON, // < > <= >=
-    PREC_TERM,       // + -
-    PREC_FACTOR,     // * /
-    PREC_UNARY,      // ! -
-    PREC_CALL,       // . ()
+    PREC_PIPE,        // |>
+    PREC_OR,          // or
+    PREC_LOGICAL_OR,  // ||
+    PREC_LOGICAL_AND, // &&
+    PREC_COMPARISON,  // == != < > <= >=
+    PREC_TERM,        // + - ^ |
+    PREC_FACTOR,      // * / % & << >>
+    PREC_AS,          // as
+    PREC_UNARY,       // ! - + & * ~
+    PREC_CALL,        // . ()
     PREC_PRIMARY
 } Precedence;
 
+/// This struct represents a full operator: precedence, kind and position
 typedef struct Op {
     Precedence prec;
     NodeKind kind;
@@ -743,16 +746,62 @@ static Index parse_primary(Parser *parser)
     return invalid;
 }
 
+static Op current_unary(Parser *parser)
+{
+    static const Op table[TOKEN_MAX] = {
+        [TOKEN_PLUS] = { .kind = NODE_UNARY_PLUS },
+        [TOKEN_MINUS] = { .kind = NODE_UNARY_MINUS },
+        [TOKEN_STAR] = { .kind = NODE_DEREF },
+        [TOKEN_EXCLAMATION] = { .kind = NODE_UNARY_NOT },
+        [TOKEN_TILDE] = { .kind = NODE_BITNOT },
+        [TOKEN_AND] = { .kind = NODE_REF }
+    };
+    Op op = table[current()];
+    if (op.kind == NODE_REF && peek(1) == TOKEN_MUT) {
+        advance();
+        op.kind = NODE_MUT_REF;
+    }
+    op.token = index();
+    return op;
+}
+
 static Index parse_lhs(Parser *parser)
 {
-    return parse_primary(parser);
+    Op op = current_unary(parser);
+    if (op.kind != 0) {
+        advance();
+        return add_node(parser, op.kind, op.token, (Data) {
+                                                       .unary = { .expr = parse_lhs(parser) },
+                                                   });
+    } else {
+        return parse_primary(parser);
+    }
 }
 
 static Op current_op(Parser *parser)
 {
     static const Op table[TOKEN_MAX] = {
+        [TOKEN_PIPE_GT] = { .prec = PREC_PIPE, .kind = NODE_PIPE_EXPR },
+        [TOKEN_OR] = { .prec = PREC_OR, .kind = NODE_OR },
+        [TOKEN_PIPE_PIPE] = { .prec = PREC_LOGICAL_OR, .kind = NODE_OR_EXPR },
+        [TOKEN_AND_AND] = { .prec = PREC_LOGICAL_AND, .kind = NODE_AND_EXPR },
+        [TOKEN_EQ_EQ] = { .prec = PREC_COMPARISON, .kind = NODE_EQ_EXPR },
+        [TOKEN_EXCLAMATION_EQ] = { .prec = PREC_COMPARISON, .kind = NODE_NOTEQ_EXPR },
+        [TOKEN_LT] = { .prec = PREC_COMPARISON, .kind = NODE_LT_EXPR },
+        [TOKEN_GT] = { .prec = PREC_COMPARISON, .kind = NODE_GT_EXPR },
+        [TOKEN_LT_EQ] = { .prec = PREC_COMPARISON, .kind = NODE_LTEQ_EXPR },
+        [TOKEN_GT_EQ] = { .prec = PREC_COMPARISON, .kind = NODE_GTEQ_EXPR },
         [TOKEN_PLUS] = { .prec = PREC_TERM, .kind = NODE_ADD_EXPR },
         [TOKEN_MINUS] = { .prec = PREC_TERM, .kind = NODE_SUB_EXPR },
+        [TOKEN_CARET] = { .prec = PREC_TERM, .kind = NODE_BITXOR_EXPR },
+        [TOKEN_PIPE] = { .prec = PREC_TERM, .kind = NODE_BITOR_EXPR },
+        [TOKEN_STAR] = { .prec = PREC_FACTOR, .kind = NODE_MUL_EXPR },
+        [TOKEN_SLASH] = { .prec = PREC_FACTOR, .kind = NODE_DIV_EXPR },
+        [TOKEN_PERCENTAGE] = { .prec = PREC_FACTOR, .kind = NODE_MOD_EXPR },
+        [TOKEN_AND] = { .prec = PREC_FACTOR, .kind = NODE_BITAND_EXPR },
+        [TOKEN_LT_LT] = { .prec = PREC_FACTOR, .kind = NODE_LSHIFT_EXPR },
+        [TOKEN_GT_GT] = { .prec = PREC_FACTOR, .kind = NODE_RSHIFT_EXPR },
+        [TOKEN_AS] = { .prec = PREC_AS, .kind = NODE_AS_EXPR },
     };
     Op op = table[current()];
     op.token = index();
@@ -766,21 +815,17 @@ static Index parse_expr_prec(Parser *parser, Precedence prec)
     if (lhs == invalid)
         return invalid;
 
-    while (true) {
-        Op op = current_op(parser);
-        if (op.prec == PREC_NONE)
-            return lhs;
+    Op op = current_op(parser);
 
+    while (prec <= op.prec) {
         advance();
 
-        if (op.prec < prec)
-            break;
-
-        Index rhs = parse_expr_prec(parser, op.prec + 1); // TODO: Check if +1 is needed
+        Index rhs = parse_expr_prec(parser, op.prec + 1);
 
         lhs = add_node(parser, op.kind, op.token, (Data) {
                                                       .binary = { lhs, rhs },
                                                   });
+        op = current_op(parser);
     }
 
     return lhs;

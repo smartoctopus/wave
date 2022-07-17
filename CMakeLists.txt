@@ -26,6 +26,7 @@ set(SOURCES
     src/compiler/main.c
     src/compiler/lexer.c
     src/compiler/ast.c
+    src/compiler/printer.c
     src/compiler/parser.c
     src/compiler/vfs.c
     src/compiler/diagnostic.c

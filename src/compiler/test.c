@@ -21,6 +21,7 @@
 
 #include "diagnostic.h"
 #include "parser.h"
+#include "printer.h"
 #include "test.h"
 
 test("Wave compiler")
